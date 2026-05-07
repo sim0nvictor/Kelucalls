@@ -27,3 +27,6 @@ prisma/dev.db-journal
 *.njsproj
 *.sln
 *.sw?
+.next
+node_modules
+.env
