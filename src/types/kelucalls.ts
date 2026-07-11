@@ -13,7 +13,7 @@ export type ChannelSummary = {
   status: ChannelStatus;
   isPaidChannel: boolean;
   isVerified: boolean;
-  rankingScore: number;
+  rankingScore: number | null;
   totalCalls: number;
   winRatePct: number;
   averageRoiPct: number;
@@ -28,6 +28,7 @@ export type ChannelSummary = {
   simulatedCurrentPnlUsd: number;
   simulatedPeakPnlUsd: number;
   refreshedAt: string | null;
+  avatarUrl: string | null;
 };
 
 export type LiveCall = {
@@ -36,6 +37,7 @@ export type LiveCall = {
   channelSlug: string;
   channelTitle: string;
   tokenSymbol: string;
+  tokenLogoUrl: string | null;
   contractAddress: string | null;
   entryPriceUsd: number;
   currentPriceUsd: number | null;
@@ -58,16 +60,29 @@ export type TrendingToken = {
   averageRoiPct: number;
   bestMultiple: number;
   lastCalledAt: string | null;
+  logoUrl: string | null;
 };
 
 export type SponsoredPlacement = {
   id: string;
   label: string;
   placement: string;
+  surface?: string;
+  placementSubtype: string;
   destinationUrl: string;
   creativeCopy: string | null;
-  channelSlug: string;
-  channelTitle: string;
+  imageUrl: string | null;
+  imageAlt: string | null;
+  channelSlug: string | null;
+  channelTitle: string | null;
+  tokenSymbol: string | null;
+  contractAddress: string | null;
+  status?: string;
+  title?: string;
+  logoUrl: string | null;
+  startsAt?: string;
+  endsAt?: string | null;
+  priority?: number;
 };
 
 export type ChannelDetail = {
@@ -97,5 +112,6 @@ export type DashboardSnapshot = {
     trackedCalls: number;
     simulatedPnlUsd: number;
     winRatePct: number;
+    trackedTokens: number;
   };
 };

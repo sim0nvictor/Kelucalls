@@ -264,33 +264,43 @@ export interface Database {
       ads: {
         Row: {
           id: string;
-          channel_id: string;
+          channel_id: string | null;   // optional — ads don't need a linked channel
           label: string;
           placement: string;
           destination_url: string;
           creative_copy: string | null;
+          image_url: string | null;    // public URL (Supabase Storage or external)
+          image_path: string | null;   // Supabase Storage path for deletion
+          image_alt: string | null;
           starts_at: string;
           ends_at: string | null;
           priority: number;
           status: AdStatus;
           budget_usd: number | null;
           metadata: Json;
+          created_by: string | null;
+          updated_by: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          channel_id: string;
+          channel_id?: string | null;
           label: string;
           placement: string;
           destination_url: string;
           creative_copy?: string | null;
+          image_url?: string | null;
+          image_path?: string | null;
+          image_alt?: string | null;
           starts_at: string;
           ends_at?: string | null;
           priority?: number;
           status?: AdStatus;
           budget_usd?: number | null;
           metadata?: Json;
+          created_by?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -306,6 +316,7 @@ export interface Database {
           name: string | null;
           chain: string;
           contract_address: string | null;
+          logo_url: string | null;
           total_calls: number;
           unique_channels: number;
           last_called_at: string | null;
@@ -318,6 +329,10 @@ export interface Database {
     Functions: {
       refresh_channel_stats: {
         Args: { target_channel_id?: string | null };
+        Returns: void;
+      };
+      refresh_public_analytics: {
+        Args: Record<string, never>;
         Returns: void;
       };
     };

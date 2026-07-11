@@ -17,9 +17,6 @@ const REQUIRED_ENV = [
 ] as const;
 
 const OPTIONAL_ENV = [
-  { name: "ADMIN_LOGIN_USERNAME", scope: "server" },
-  { name: "ADMIN_LOGIN_PASSWORD", scope: "server" },
-  { name: "ADMIN_SESSION_SECRET", scope: "server" },
   { name: "SIMULATED_INVESTMENT_PER_CALL", scope: "server" },
   { name: "TELEGRAM_API_ID", scope: "scraper" },
   { name: "TELEGRAM_API_HASH", scope: "scraper" },
@@ -33,6 +30,10 @@ const EXPECTED_TABLES = [
   "channel_stats",
   "submissions",
   "ads",
+  "admin_users",
+  "sponsored_placements",
+  "moderation_reports",
+  "admin_audit_logs",
   "trending_snapshots",
 ] as const;
 

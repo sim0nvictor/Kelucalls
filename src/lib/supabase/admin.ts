@@ -1,7 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/lib/supabase/types";
-
 /**
  * Creates a **fresh** Supabase admin client for write operations.
  *
@@ -10,7 +8,7 @@ import type { Database } from "@/lib/supabase/types";
  *
  * Uses the service role key — NEVER expose to the browser.
  */
-export function createSupabaseAdmin(): SupabaseClient<Database> {
+export function createSupabaseAdmin(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -20,7 +18,7 @@ export function createSupabaseAdmin(): SupabaseClient<Database> {
     );
   }
 
-  return createClient<Database>(url, serviceRoleKey, {
+  return createClient(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

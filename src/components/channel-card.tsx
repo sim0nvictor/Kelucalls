@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowUpRight, BadgeCheck, DollarSign, Percent, Trophy } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowUpRight } from "lucide-react";
 
 import { formatCompactCurrency, formatMultiple, formatPercent } from "@/lib/metrics";
 import type { ChannelSummary } from "@/types/kelucalls";
@@ -7,17 +8,31 @@ import type { Channel as LegacyChannel } from "@/types/channel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ChannelAvatar } from "@/components/channel-avatar";
 
 type ChannelCardProps = {
   channel: ChannelSummary | LegacyChannel;
   rank?: number;
 };
 
+function StatPill({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col justify-center rounded-xl border border-white/8 bg-white/4 px-2 py-2">
+      <div className="truncate text-[9px] font-medium uppercase tracking-[0.12em] leading-none text-slate-500">
+        {label}
+      </div>
+      <div className="mt-1.5 truncate text-sm font-semibold leading-none text-white">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export function ChannelCard({ channel, rank }: ChannelCardProps) {
   if (!("slug" in channel)) {
     return (
-      <Card className="h-full border-white/8 bg-slate-950/70">
-        <CardContent className="flex h-full flex-col gap-5">
+      <Card className="h-full border-white/8 bg-slate-950/70 w-full">
+        <CardContent className="flex h-full flex-col gap-5 p-4 sm:p-6">
           <div>
             <div className="flex flex-wrap gap-2">
               <Badge>{channel.category}</Badge>
@@ -48,97 +63,94 @@ export function ChannelCard({ channel, rank }: ChannelCardProps) {
   }
 
   return (
-    <Card className="h-full border-white/8 bg-slate-950/70">
-      <CardContent className="flex h-full flex-col gap-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {rank ? <Badge>Rank #{rank}</Badge> : null}
+    <Card className="h-full border-white/8 bg-slate-950/70 w-full">
+      <CardContent className="flex h-full flex-col gap-2.5 p-3 sm:p-4">
+
+        {/* ── Header ── */}
+        <div className="flex items-start gap-2.5">
+          {/* Avatar with rank badge overlaid */}
+          <div className="relative shrink-0">
+            <ChannelAvatar src={channel.avatarUrl} title={channel.title} size={40} />
+            {rank ? (
+              <span className="absolute -bottom-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-0.5 text-[9px] font-bold text-slate-950 leading-none">
+                #{rank}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold leading-snug text-white">
+              {channel.title}
+            </h3>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <Badge className="border-white/10 bg-white/5 px-1.5 py-0 text-[9px] leading-4 text-slate-300 capitalize tracking-normal">
+                {channel.status}
+              </Badge>
               {channel.isVerified ? (
-                <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">
-                  Verified
+                <Badge className="border-emerald-400/20 bg-emerald-400/10 px-1.5 py-0 text-[9px] leading-4 text-emerald-200 tracking-normal">
+                  ✓ Verified
                 </Badge>
               ) : null}
-              <Badge className="border-white/10 bg-white/5 text-slate-200">{channel.status}</Badge>
             </div>
-            <div>
-              <h3 className="text-xl font-semibold text-white">{channel.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                {channel.description || "No channel profile has been written yet."}
-              </p>
-            </div>
+            <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-slate-400">
+              {channel.description || "No channel profile has been written yet."}
+            </p>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-500">
-              <Percent className="size-4" />
-              Average ROI
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-white">
-              {formatPercent(channel.averageRoiPct)}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-500">
-              <BadgeCheck className="size-4" />
-              Win Rate
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-white">
-              {formatPercent(channel.winRatePct)}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-500">
-              <DollarSign className="size-4" />
-              Simulated PnL
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-white">
-              {formatCompactCurrency(channel.simulatedCurrentPnlUsd)}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-500">
-              <Trophy className="size-4" />
-              10x / 100x
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-white">
-              {channel.hit10xCount} / {channel.hit100xCount}
-            </div>
-          </div>
+        {/* ── Stats rows ── */}
+        <div className="grid grid-cols-3 gap-1.5">
+          <StatPill
+            label="Avg ROI"
+            value={
+              <span className={channel.averageRoiPct >= 0 ? "text-emerald-300" : "text-red-400"}>
+                {formatPercent(channel.averageRoiPct)}
+              </span>
+            }
+          />
+          <StatPill label="Win Rate" value={formatPercent(channel.winRatePct)} />
+          <StatPill
+            label="Score"
+            value={channel.rankingScore != null ? channel.rankingScore.toFixed(1) : "—"}
+          />
         </div>
 
-        <div className="grid gap-3 text-sm text-slate-400 sm:grid-cols-3">
-          <div>
-            <div>Total calls</div>
-            <div className="mt-1 text-lg font-semibold text-white">{channel.totalCalls}</div>
-          </div>
-          <div>
-            <div>Best multiple</div>
-            <div className="mt-1 text-lg font-semibold text-white">
-              {formatMultiple(channel.bestMultiple)}
-            </div>
-          </div>
-          <div>
-            <div>Ranking score</div>
-            <div className="mt-1 text-lg font-semibold text-white">
-              {channel.rankingScore.toFixed(1)}
-            </div>
-          </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <StatPill
+            label="Sim PnL"
+            value={
+              <span className={channel.simulatedCurrentPnlUsd >= 0 ? "text-emerald-300" : "text-red-400"}>
+                {formatCompactCurrency(channel.simulatedCurrentPnlUsd)}
+              </span>
+            }
+          />
+          <StatPill label="Best ×" value={formatMultiple(channel.bestMultiple)} />
+          <StatPill
+            label="10x/100x"
+            value={`${channel.hit10xCount}/${channel.hit100xCount}`}
+          />
         </div>
 
-        <div className="mt-auto flex gap-3">
+        {/* ── Call count strip ── */}
+        <div className="flex items-center rounded-lg border border-white/6 bg-white/3 px-2.5 py-1.5 text-xs">
+          <span className="text-slate-500">Calls</span>
+          <span className="ml-1.5 font-semibold text-white">{channel.totalCalls}</span>
+        </div>
+
+        {/* ── Action buttons — compact, side by side ── */}
+        <div className="mt-auto flex gap-2">
           <a href={channel.telegramUrl} target="_blank" rel="noreferrer" className="flex-1">
-            <Button className="w-full">Open Telegram</Button>
+            <Button className="h-8 w-full rounded-full px-3 text-xs">
+              Telegram
+            </Button>
           </a>
-          <Link href={`/channel/${channel.slug}`} className="flex-1">
-            <Button variant="secondary" className="w-full">
-              Channel Report
-              <ArrowUpRight className="size-4" />
+          <Link href={`/channels/${channel.slug}`} className="flex-1">
+            <Button variant="secondary" className="h-8 w-full rounded-full px-3 text-xs">
+              Report <ArrowUpRight className="size-3" />
             </Button>
           </Link>
         </div>
+
       </CardContent>
     </Card>
   );

@@ -1,0 +1,10 @@
+{
+  "name": "@kelucalls/db",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.3"
+  }
+}

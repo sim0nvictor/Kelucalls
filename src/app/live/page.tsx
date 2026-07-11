@@ -3,9 +3,14 @@ import { Radio, Zap, Clock, TrendingUp, TrendingDown, Flame, Bell } from "lucide
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getDashboardSnapshot } from "@/lib/dashboard-data";
+import { getLiveCalls, getTrendingTokens, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
 import { formatMultiple, formatPercent } from "@/lib/metrics";
 import { LiveFeedTicker } from "./live-ticker";
+import { SponsoredTokenCard } from "@/components/sponsored-placement-card";
+import { TokenAvatar } from "@/components/token-avatar";
+
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Live Feed | Kelucalls",
@@ -13,12 +18,24 @@ export const metadata = {
 };
 
 export default async function LivePage() {
-  const snapshot = await getDashboardSnapshot("smart");
-  const liveCalls = snapshot.liveCalls;
-  const trendingTokens = snapshot.trendingTokens;
+  // Fetch independently at their real limits — not capped by getDashboardSnapshot
+  const [liveCalls, trendingTokens, sponsoredTokens] = await Promise.all([
+    getLiveCalls(50),       // show up to 50 recent calls
+    getTrendingTokens(10),  // top 10 hot tokens for the sidebar
+    getSponsoredTokenPlacements("live_feed", 2),
+  ]);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      {/* Sponsored token placements — always at the top */}
+      {sponsoredTokens.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {sponsoredTokens.map((placement) => (
+            <SponsoredTokenCard key={placement.id} placement={placement} />
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Badge className="border-red-400/20 bg-red-400/10 text-red-200 animate-pulse">
@@ -27,7 +44,7 @@ export default async function LivePage() {
           </Badge>
           <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Live Feed</h1>
           <p className="mt-2 text-slate-400">
-            Watch calls come in live with real-time ROI tracking
+            {liveCalls.length} recent calls with real-time ROI tracking
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -41,6 +58,7 @@ export default async function LivePage() {
       <LiveFeedTicker calls={liveCalls} />
 
       <div className="grid gap-6 lg:grid-cols-3">
+        {/* ── Main call feed ── */}
         <Card className="border-white/8 bg-slate-950/70 lg:col-span-2">
           <CardContent className="p-6">
             <div className="mb-6 flex items-center justify-between">
@@ -52,15 +70,9 @@ export default async function LivePage() {
                 <span className="text-sm text-slate-500">({liveCalls.length} calls)</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="secondary" size="sm">
-                  All
-                </Button>
-                <Button variant="secondary" size="sm">
-                  2x+
-                </Button>
-                <Button variant="secondary" size="sm">
-                  10x+
-                </Button>
+                <Button variant="secondary" size="sm">All</Button>
+                <Button variant="secondary" size="sm">2x+</Button>
+                <Button variant="secondary" size="sm">10x+</Button>
               </div>
             </div>
 
@@ -74,16 +86,16 @@ export default async function LivePage() {
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                     <div className="relative flex flex-wrap items-start justify-between gap-4">
                       <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex size-10 items-center justify-center rounded-xl bg-white/5">
-                          <span className="text-sm font-bold text-cyan-300">
-                            {call.tokenSymbol.slice(0, 2)}
-                          </span>
-                        </div>
+                        <TokenAvatar
+                          src={call.tokenLogoUrl}
+                          symbol={call.tokenSymbol}
+                          size={40}
+                        />
                         <div>
                           <div className="flex items-center gap-2">
                             <Link
-                              href={`/channel/${call.channelSlug}`}
-                              className="text-sm text-cyan-300 hover:text-cyan-200"
+                              href={`/channels/${call.channelSlug}`}
+                              className="text-sm text-cyan-300 hover:text-cyan-200 transition-colors"
                             >
                               {call.channelTitle}
                             </Link>
@@ -95,19 +107,13 @@ export default async function LivePage() {
                           <div className="mt-1 flex items-center gap-2">
                             <span className="text-xl font-bold text-white">{call.tokenSymbol}</span>
                             {call.hit2x && (
-                              <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">
-                                2x
-                              </Badge>
+                              <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">2x</Badge>
                             )}
                             {call.hit10x && (
-                              <Badge className="border-yellow-400/20 bg-yellow-400/10 text-yellow-200">
-                                10x
-                              </Badge>
+                              <Badge className="border-yellow-400/20 bg-yellow-400/10 text-yellow-200">10x</Badge>
                             )}
                             {call.hit100x && (
-                              <Badge className="border-red-400/20 bg-red-400/10 text-red-200">
-                                100x
-                              </Badge>
+                              <Badge className="border-red-400/20 bg-red-400/10 text-red-200">100x</Badge>
                             )}
                           </div>
                         </div>
@@ -116,11 +122,7 @@ export default async function LivePage() {
                       <div className="flex items-center gap-6">
                         <div className="text-right">
                           <div className="text-xs text-slate-500">Current ROI</div>
-                          <div
-                            className={`text-2xl font-bold ${
-                              call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"
-                            }`}
-                          >
+                          <div className={`text-2xl font-bold ${call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
                             {formatPercent(call.currentRoiPct)}
                           </div>
                         </div>
@@ -130,18 +132,10 @@ export default async function LivePage() {
                             {formatMultiple(call.peakMultiple)}
                           </div>
                         </div>
-                        <div
-                          className={`flex size-10 items-center justify-center rounded-xl ${
-                            call.currentRoiPct > 0
-                              ? "bg-emerald-500/10"
-                              : "bg-red-500/10"
-                          }`}
-                        >
-                          {call.currentRoiPct > 0 ? (
-                            <TrendingUp className="size-5 text-emerald-400" />
-                          ) : (
-                            <TrendingDown className="size-5 text-red-400" />
-                          )}
+                        <div className={`flex size-10 items-center justify-center rounded-xl ${call.currentRoiPct > 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
+                          {call.currentRoiPct > 0
+                            ? <TrendingUp className="size-5 text-emerald-400" />
+                            : <TrendingDown className="size-5 text-red-400" />}
                         </div>
                       </div>
                     </div>
@@ -158,6 +152,7 @@ export default async function LivePage() {
           </CardContent>
         </Card>
 
+        {/* ── Sidebar ── */}
         <div className="space-y-4">
           <Card className="border-white/8 bg-slate-950/70">
             <CardContent className="p-5">
@@ -166,27 +161,24 @@ export default async function LivePage() {
                 <h3 className="font-semibold text-white">Hot Tokens</h3>
               </div>
               <div className="mt-4 space-y-3">
-                {trendingTokens.slice(0, 5).map((token, index) => (
-                  <div
-                    key={token.id}
-                    className="flex items-center justify-between rounded-xl bg-white/5 p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-6 items-center justify-center rounded-md bg-white/10 text-xs font-bold text-slate-400">
-                        {index + 1}
-                      </span>
-                      <div>
-                        <div className="font-medium text-white">{token.symbol}</div>
-                        <div className="text-xs text-slate-500">{token.chain}</div>
+                {trendingTokens.map((token, index) => (
+                  <Link key={token.id} href={`/tokens?symbol=${token.symbol}`}>
+                    <div className="flex items-center justify-between rounded-xl bg-white/5 p-3 hover:bg-white/8 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="flex size-6 items-center justify-center rounded-md bg-white/10 text-xs font-bold text-slate-400">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <div className="font-medium text-white">{token.symbol}</div>
+                          <div className="text-xs text-slate-500 capitalize">{token.chain}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-white">{formatMultiple(token.bestMultiple)}</div>
+                        <div className="text-xs text-slate-500">{token.totalCalls} calls</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-white">
-                        {formatMultiple(token.bestMultiple)}
-                      </div>
-                      <div className="text-xs text-slate-500">{token.totalCalls} calls</div>
-                    </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </CardContent>
@@ -198,7 +190,7 @@ export default async function LivePage() {
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div className="rounded-xl bg-white/5 p-3">
                   <div className="text-2xl font-bold text-white">{liveCalls.length}</div>
-                  <div className="text-xs text-slate-500">Calls Today</div>
+                  <div className="text-xs text-slate-500">Calls Loaded</div>
                 </div>
                 <div className="rounded-xl bg-white/5 p-3">
                   <div className="text-2xl font-bold text-emerald-400">

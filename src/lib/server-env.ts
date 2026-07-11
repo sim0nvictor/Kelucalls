@@ -11,24 +11,16 @@ export function getSupabaseUrl() {
   return readEnv("NEXT_PUBLIC_SUPABASE_URL");
 }
 
+export function getSupabaseAnonKey() {
+  return readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+}
+
 export function getSupabaseServiceRoleKey() {
   return readEnv("SUPABASE_SERVICE_ROLE_KEY");
 }
 
 export function isSupabaseConfigured() {
   return Boolean(getSupabaseUrl() && getSupabaseServiceRoleKey());
-}
-
-export function getAdminUsername() {
-  return readEnv("ADMIN_LOGIN_USERNAME") ?? "admin";
-}
-
-export function getAdminPassword() {
-  return readEnv("ADMIN_LOGIN_PASSWORD");
-}
-
-export function getAdminSessionSecret() {
-  return readEnv("ADMIN_SESSION_SECRET");
 }
 
 export function getSimulatedInvestmentPerCall() {

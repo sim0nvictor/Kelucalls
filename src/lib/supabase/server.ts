@@ -1,8 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/lib/supabase/types";
-
-let serverInstance: SupabaseClient<Database> | null = null;
+let serverInstance: SupabaseClient | null = null;
 
 /**
  * Returns a server-side Supabase client using the **service role key**.
@@ -10,7 +8,7 @@ let serverInstance: SupabaseClient<Database> | null = null;
  * This client BYPASSES RLS and must NEVER be exposed to the browser.
  * It is a singleton — repeated calls return the same instance.
  */
-export function getSupabaseServer(): SupabaseClient<Database> {
+export function getSupabaseServer(): SupabaseClient {
   if (serverInstance) {
     return serverInstance;
   }
@@ -24,7 +22,7 @@ export function getSupabaseServer(): SupabaseClient<Database> {
     );
   }
 
-  serverInstance = createClient<Database>(url, serviceRoleKey, {
+  serverInstance = createClient(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -48,7 +46,7 @@ export function isSupabaseServerConfigured(): boolean {
  * If Supabase is not configured, returns the fallback immediately.
  */
 export async function withSupabaseServer<T>(
-  operation: (client: SupabaseClient<Database>) => Promise<T>,
+  operation: (client: SupabaseClient) => Promise<T>,
   fallback: T
 ): Promise<T> {
   if (!isSupabaseServerConfigured()) {

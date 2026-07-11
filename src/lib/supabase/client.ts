@@ -1,8 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/lib/supabase/types";
-
-let clientInstance: SupabaseClient<Database> | null = null;
+let clientInstance: SupabaseClient | null = null;
 
 /**
  * Returns a browser-safe Supabase client using the **anon key**.
@@ -10,7 +8,7 @@ let clientInstance: SupabaseClient<Database> | null = null;
  * This client respects RLS policies and is safe to expose in client components.
  * It is a singleton — repeated calls return the same instance.
  */
-export function getSupabaseClient(): SupabaseClient<Database> {
+export function getSupabaseClient(): SupabaseClient {
   if (clientInstance) {
     return clientInstance;
   }
@@ -24,7 +22,7 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     );
   }
 
-  clientInstance = createClient<Database>(url, anonKey, {
+  clientInstance = createClient(url, anonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,

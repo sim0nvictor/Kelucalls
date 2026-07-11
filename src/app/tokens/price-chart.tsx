@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   AreaChart,
   Area,
@@ -29,7 +29,21 @@ const generatePriceData = () => {
   return data;
 };
 
+function formatPriceValue(value: number | string | undefined) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? `$${parsed.toFixed(6)}` : "$0.000000";
+}
+
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
+
 export function TokenPriceChart() {
+  const mounted = useIsClient();
   const [chartType, setChartType] = useState<"area" | "composed">("area");
   const data = generatePriceData();
 
@@ -55,89 +69,93 @@ export function TokenPriceChart() {
       </div>
 
       <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          {chartType === "area" ? (
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="date"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                tickFormatter={(value) => `$${value.toFixed(6)}`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(2, 8, 23, 0.95)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "12px"
-                }}
-                labelStyle={{ color: "#94a3b8" }}
-                formatter={(value: number) => [`$${value.toFixed(6)}`, "Price"]}
-              />
-              <Area
-                type="monotone"
-                dataKey="price"
-                stroke="#a855f7"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorPrice)"
-              />
-            </AreaChart>
-          ) : (
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <XAxis
-                dataKey="date"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                yAxisId="left"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                tickFormatter={(value) => `$${value.toFixed(5)}`}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(2, 8, 23, 0.95)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "12px"
-                }}
-              />
-              <Area
-                yAxisId="left"
-                type="monotone"
-                dataKey="price"
-                stroke="#a855f7"
-                strokeWidth={2}
-                fill="none"
-              />
-              <Bar yAxisId="right" dataKey="volume" fill="#6366f1" opacity={0.5} radius={[4, 4, 0, 0]} />
-            </ComposedChart>
-          )}
-        </ResponsiveContainer>
+        {!mounted ? (
+          <div className="h-full w-full animate-pulse rounded-2xl bg-white/5" />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            {chartType === "area" ? (
+              <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  tickFormatter={(value) => `$${value.toFixed(6)}`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(2, 8, 23, 0.95)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "12px"
+                  }}
+                  labelStyle={{ color: "#94a3b8" }}
+                  formatter={(value) => [formatPriceValue(value as number | string | undefined), "Price"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#a855f7"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorPrice)"
+                />
+              </AreaChart>
+            ) : (
+              <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  yAxisId="left"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  tickFormatter={(value) => `$${value.toFixed(5)}`}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(2, 8, 23, 0.95)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "12px"
+                  }}
+                />
+                <Area
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#a855f7"
+                  strokeWidth={2}
+                  fill="none"
+                />
+                <Bar yAxisId="right" dataKey="volume" fill="#6366f1" opacity={0.5} radius={[4, 4, 0, 0]} />
+              </ComposedChart>
+            )}
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

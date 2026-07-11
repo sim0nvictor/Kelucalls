@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
 import { formatPercent, formatCompactCurrency } from "@/lib/metrics";
 import { TopCallersChart } from "./callers-chart";
+import { ChannelAvatar } from "@/components/channel-avatar";
 
 export const metadata = {
   title: "Top Callers | Kelucalls",
@@ -64,7 +65,14 @@ export default async function TopCallersPage() {
               </div>
               {leaderboard[0] && (
                 <div className="mt-4">
-                  <div className="text-2xl font-bold text-white">{leaderboard[0].title}</div>
+                  <div className="flex items-center gap-3">
+                    <ChannelAvatar
+                      src={leaderboard[0].avatarUrl}
+                      title={leaderboard[0].title}
+                      size={40}
+                    />
+                    <div className="text-lg font-bold text-white">{leaderboard[0].title}</div>
+                  </div>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-500">Avg ROI</span>
@@ -152,14 +160,14 @@ export default async function TopCallersPage() {
                   >
                     <td className="py-4">
                       <div
-                        className={`inline-flex size-8 items-center justify-center rounded-xl font-bold ${
+                        className={`inline-flex size-8 items-center justify-center font-bold ${
                           index === 0
-                            ? "bg-gradient-to-br from-yellow-500 to-yellow-600 text-black"
+                            ? "bg-transparent text-slate-400"
                             : index === 1
-                              ? "bg-gradient-to-br from-slate-300 to-slate-400 text-black"
+                              ? "bg-transparent text-slate-400"
                               : index === 2
-                                ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white"
-                                : "bg-white/10 text-slate-400"
+                                ? "bg-transparent text-slate-400"
+                                : "bg-transparent text-slate-400"
                         }`}
                       >
                         {index + 1}
@@ -167,22 +175,31 @@ export default async function TopCallersPage() {
                     </td>
                     <td className="py-4">
                       <Link href={`/channel/${channel.slug}`} className="group">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white group-hover:text-cyan-300">
-                            {channel.title}
-                          </span>
-                          {channel.isVerified && (
-                            <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">
-                              Verified
-                            </Badge>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <ChannelAvatar
+                            src={channel.avatarUrl}
+                            title={channel.title}
+                            size={36}
+                          />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                                {channel.title}
+                              </span>
+                              {channel.isVerified && (
+                                <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">
+                                  Verified
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500">@{channel.telegramHandle}</div>
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-500">@{channel.telegramHandle}</div>
                       </Link>
                     </td>
                     <td className="py-4 text-right">
                       <span className="inline-flex items-center rounded-lg bg-cyan-500/10 px-2.5 py-1 text-sm font-semibold text-cyan-300">
-                        {channel.rankingScore.toFixed(1)}
+                        {channel.rankingScore != null ? channel.rankingScore.toFixed(1) : "—"}
                       </span>
                     </td>
                     <td className="py-4 text-right">

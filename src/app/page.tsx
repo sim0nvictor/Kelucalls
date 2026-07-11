@@ -1,23 +1,28 @@
 import Link from "next/link";
-import { Activity, ArrowRight, Radio, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, Radio, Sparkles, TrendingUp } from "lucide-react";
 
-import { ChannelCard } from "@/components/channel-card";
+import { TokenAvatar } from "@/components/token-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getDashboardSnapshot } from "@/lib/dashboard-data";
+import { getDashboardSnapshot, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
 import { formatCompactCurrency, formatMultiple, formatPercent } from "@/lib/metrics";
 import type { RankingMode } from "@/types/kelucalls";
+import { LeaderboardWithPlacements } from "@/components/leaderboard-with-placements";
+import { SponsoredTokenCard } from "@/components/sponsored-placement-card";
+
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 type HomePageProps = {
   searchParams: Promise<{ ranking?: string }>;
 };
 
 const rankingModes: Array<{ value: RankingMode; label: string }> = [
-  { value: "smart", label: "Smart ranking" },
-  { value: "roi", label: "ROI" },
+  { value: "smart",    label: "Smart ranking" },
+  { value: "roi",      label: "ROI" },
   { value: "win-rate", label: "Win rate" },
-  { value: "pnl", label: "PnL" }
+  { value: "pnl",      label: "PnL" }
 ];
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -26,10 +31,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     ? (ranking as RankingMode)
     : "smart";
 
-  const snapshot = await getDashboardSnapshot(rankingMode);
+  const [snapshot, sponsoredTokens] = await Promise.all([
+    getDashboardSnapshot(rankingMode),
+    getSponsoredTokenPlacements("homepage", 1),
+  ]);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="rounded-[2rem] border border-white/10 bg-slate-950/75 px-6 py-10 shadow-[0_0_120px_rgba(8,145,178,0.12)] sm:px-8">
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
@@ -43,7 +53,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 Sponsored placements stay visible, but never contaminate trust rankings.
               </p>
             </div>
-
             <div className="flex flex-wrap gap-3">
               <Link href="/channels">
                 <Button size="lg">
@@ -52,12 +61,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </Button>
               </Link>
               <a href="#submissions">
-                <Button variant="secondary" size="lg">
-                  Submit a channel
-                </Button>
+                <Button variant="secondary" size="lg">Submit a channel</Button>
               </a>
             </div>
-
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-3xl border border-white/8 bg-white/4 p-5">
                 <div className="text-2xl font-semibold text-white">{snapshot.totals.trackedChannels}</div>
@@ -103,7 +109,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <div className="rounded-2xl border border-white/8 bg-slate-950/80 p-4">
                   <div className="text-slate-500">Trending tokens</div>
                   <div className="mt-2 text-2xl font-semibold text-white">
-                    {snapshot.trendingTokens.length}
+                    {snapshot.totals.trackedTokens}
                   </div>
                 </div>
               </div>
@@ -123,13 +129,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </Card>
       ) : null}
 
+      {/* ── Leaderboard ───────────────────────────────────────────────────── */}
       <section className="space-y-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">
               Leaderboard
             </Badge>
-            <h2 className="mt-3 text-3xl font-semibold text-white">Real rankings, not subscriber theater.</h2>
+            <h2 className="mt-3 text-3xl font-semibold text-white">
+              Real rankings, not subscriber theater.
+            </h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {rankingModes.map((mode) => (
@@ -141,14 +150,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             ))}
           </div>
         </div>
-        <div className="grid gap-6 xl:grid-cols-2">
-          {snapshot.leaderboard.slice(0, 6).map((channel, index) => (
-            <ChannelCard key={channel.id} channel={channel} rank={index + 1} />
-          ))}
-        </div>
+        {/* Channel sponsored placements inject after rank 5/6 inside this component */}
+        <LeaderboardWithPlacements
+          channels={snapshot.leaderboard.slice(0, 6)}
+          placements={snapshot.sponsoredPlacements}
+        />
       </section>
 
+      {/* ── Live feed + Trending + Sponsored ──────────────────────────────── */}
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+
+        {/* Live call feed */}
         <Card>
           <CardContent className="space-y-5">
             <div className="flex items-center gap-3">
@@ -158,14 +170,25 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <p className="text-sm text-slate-400">Recent calls with live ROI and breakout detection.</p>
               </div>
             </div>
+
+            {/* Sponsored token — top of live feed card */}
+            {sponsoredTokens.length > 0 && (
+              <SponsoredTokenCard placement={sponsoredTokens[0]} />
+            )}
+
             <div className="space-y-3">
               {snapshot.liveCalls.map((call) => (
                 <div key={call.id} className="rounded-2xl border border-white/8 bg-slate-900/80 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="text-sm text-cyan-300">{call.channelTitle}</div>
-                      <div className="mt-1 text-lg font-semibold text-white">{call.tokenSymbol}</div>
-                      <div className="mt-1 text-xs text-slate-500">{new Date(call.calledAt).toLocaleString()}</div>
+                    <div className="flex items-center gap-3">
+                      <TokenAvatar src={call.tokenLogoUrl} symbol={call.tokenSymbol} size={36} />
+                      <div>
+                        <div className="text-sm text-cyan-300">{call.channelTitle}</div>
+                        <div className="mt-0.5 text-lg font-semibold text-white">{call.tokenSymbol}</div>
+                        <div className="mt-0.5 text-xs text-slate-500">
+                          {new Date(call.calledAt).toLocaleString()}
+                        </div>
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-slate-500">Current ROI</div>
@@ -176,9 +199,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
                     <span>Peak {formatMultiple(call.peakMultiple)}</span>
-                    {call.hit2x ? <span>2x</span> : null}
-                    {call.hit10x ? <span>10x</span> : null}
-                    {call.hit100x ? <span>100x</span> : null}
+                    {call.hit2x   ? <span className="text-emerald-400">2x</span>   : null}
+                    {call.hit10x  ? <span className="text-emerald-400">10x</span>  : null}
+                    {call.hit100x ? <span className="text-emerald-400">100x</span> : null}
                   </div>
                 </div>
               ))}
@@ -187,6 +210,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </Card>
 
         <div className="space-y-6">
+          {/* Trending tokens */}
           <Card>
             <CardContent className="space-y-5">
               <div className="flex items-center gap-3">
@@ -198,60 +222,34 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </div>
               <div className="space-y-3">
                 {snapshot.trendingTokens.map((token) => (
-                  <div key={token.id} className="rounded-2xl border border-white/8 bg-slate-900/80 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="text-lg font-semibold text-white">{token.symbol}</div>
-                        <div className="text-sm text-slate-500">{token.chain}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-slate-500">Best multiple</div>
-                        <div className="text-lg font-semibold text-white">
-                          {formatMultiple(token.bestMultiple)}
+                  <Link key={token.id} href={`/tokens?symbol=${token.symbol}`}>
+                    <div className="rounded-2xl border border-white/8 bg-slate-900/80 p-4 transition-colors hover:bg-white/5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <TokenAvatar src={token.logoUrl} symbol={token.symbol} size={36} />
+                          <div>
+                            <div className="text-lg font-semibold text-white">{token.symbol}</div>
+                            <div className="text-sm text-slate-500">{token.chain}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-slate-500">Best multiple</div>
+                          <div className="text-lg font-semibold text-white">
+                            {formatMultiple(token.bestMultiple)}
+                          </div>
                         </div>
                       </div>
+                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-400">
+                        <span>{token.totalCalls} calls</span>
+                        <span>{token.uniqueChannels} channels</span>
+                        <span className={token.averageRoiPct >= 0 ? "text-emerald-400" : "text-red-400"}>
+                          {formatPercent(token.averageRoiPct)} avg ROI
+                        </span>
+                      </div>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-400">
-                      <span>{token.totalCalls} calls</span>
-                      <span>{token.uniqueChannels} channels</span>
-                      <span>{formatPercent(token.averageRoiPct)} avg ROI</span>
-                    </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Activity className="size-5 text-orange-300" />
-                <div>
-                  <h2 className="text-2xl font-semibold text-white">Sponsored placements</h2>
-                  <p className="text-sm text-slate-400">Visible, labeled, and fully separated from rank logic.</p>
-                </div>
-              </div>
-              {snapshot.sponsoredPlacements.length > 0 ? (
-                snapshot.sponsoredPlacements.map((placement) => (
-                  <a
-                    key={placement.id}
-                    href={placement.destinationUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4 transition-colors hover:bg-orange-400/15"
-                  >
-                    <div className="text-xs uppercase tracking-[0.24em] text-orange-200">
-                      Sponsored
-                    </div>
-                    <div className="mt-2 text-lg font-semibold text-white">{placement.channelTitle}</div>
-                    <div className="mt-1 text-sm text-slate-300">{placement.creativeCopy || placement.label}</div>
-                  </a>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/4 p-4 text-sm text-slate-400">
-                  No active sponsored placements.
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
