@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Layers, LayoutDashboard, Megaphone, ShieldAlert, Sparkles } from "lucide-react";
+import { BarChart3, Layers, LayoutDashboard, Megaphone, ShieldAlert, Sparkles, BookOpen } from "lucide-react";
 
 import { ADMIN_BASE_PATH } from "@/lib/admin/constants";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: ADMIN_BASE_PATH, label: "Overview", icon: LayoutDashboard },
-  { href: `${ADMIN_BASE_PATH}/channels`,      label: "Channels",    icon: Layers },  
+  { href: `${ADMIN_BASE_PATH}/channels`,      label: "Channels",    icon: Layers },
+  { href: `${ADMIN_BASE_PATH}/insights`, label: "Insights", icon: BookOpen },
   { href: `${ADMIN_BASE_PATH}/ads`, label: "Ads", icon: Megaphone },
   { href: `${ADMIN_BASE_PATH}/placements`, label: "Placements", icon: Sparkles },
   { href: `${ADMIN_BASE_PATH}/moderation`, label: "Moderation", icon: ShieldAlert },

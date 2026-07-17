@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, ArrowUpRight, Compass } from "lucide-react";
+import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, ArrowUpRight, Compass, BookOpen } from "lucide-react";
 
 import Logo from "@/assets/logo.jpg";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const navLinks = [
   { href: "/channels",   label: "Channels",   icon: Layers },
   { href: "/tokens",     label: "Tokens",     icon: Activity },
   { href: "/live",       label: "Live Feed",  icon: Radio },
+  { href: "/insights",   label: "Insights",   icon: BookOpen },
   { href: "/track",      label: "Track",      icon: Compass },
 ];
 

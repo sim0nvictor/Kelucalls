@@ -9,6 +9,7 @@ export type ChannelStatus = "pending" | "active" | "paused" | "archived";
 export type CallStatus = "open" | "closed" | "invalid";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type AdStatus = "draft" | "active" | "paused" | "expired";
+export type ArticleStatus = "draft" | "published" | "scheduled" | "archived";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -305,6 +306,158 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["ads"]["Insert"]>;
+      };
+
+      article_categories: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          color: string | null;
+          icon: string | null;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          description?: string | null;
+          color?: string | null;
+          icon?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["article_categories"]["Insert"]>;
+      };
+
+      article_tags: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["article_tags"]["Insert"]>;
+      };
+
+      articles: {
+        Row: {
+          id: string;
+          title: string;
+          slug: string;
+          summary: string | null;
+          content: string;
+          featured_image_url: string | null;
+          featured_image_alt: string | null;
+          author: string;
+          author_avatar_url: string | null;
+          category_id: string | null;
+          status: ArticleStatus;
+          published_at: string | null;
+          scheduled_at: string | null;
+          is_featured: boolean;
+          is_trending: boolean;
+          is_editor_pick: boolean;
+          reading_time_minutes: number;
+          view_count: number;
+          share_count: number;
+          seo_title: string | null;
+          meta_description: string | null;
+          canonical_url: string | null;
+          keywords: string[] | null;
+          open_graph_image_url: string | null;
+          twitter_card: string | null;
+          related_article_ids: string[] | null;
+          linked_token_id: string | null;
+          linked_channel_id: string | null;
+          metadata: Json;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          slug: string;
+          summary?: string | null;
+          content?: string;
+          featured_image_url?: string | null;
+          featured_image_alt?: string | null;
+          author?: string;
+          author_avatar_url?: string | null;
+          category_id?: string | null;
+          status?: ArticleStatus;
+          published_at?: string | null;
+          scheduled_at?: string | null;
+          is_featured?: boolean;
+          is_trending?: boolean;
+          is_editor_pick?: boolean;
+          reading_time_minutes?: number;
+          view_count?: number;
+          share_count?: number;
+          seo_title?: string | null;
+          meta_description?: string | null;
+          canonical_url?: string | null;
+          keywords?: string[] | null;
+          open_graph_image_url?: string | null;
+          twitter_card?: string | null;
+          related_article_ids?: string[] | null;
+          linked_token_id?: string | null;
+          linked_channel_id?: string | null;
+          metadata?: Json;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["articles"]["Insert"]>;
+      };
+
+      article_tags_junction: {
+        Row: {
+          article_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          article_id: string;
+          tag_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["article_tags_junction"]["Insert"]>;
+      };
+
+      article_views: {
+        Row: {
+          id: string;
+          article_id: string;
+          session_id: string | null;
+          ip_hash: string | null;
+          referrer: string | null;
+          user_agent: string | null;
+          viewed_at: string;
+        };
+        Insert: {
+          id?: string;
+          article_id: string;
+          session_id?: string | null;
+          ip_hash?: string | null;
+          referrer?: string | null;
+          user_agent?: string | null;
+          viewed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["article_views"]["Insert"]>;
       };
     };
 

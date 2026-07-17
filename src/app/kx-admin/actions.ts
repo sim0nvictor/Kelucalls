@@ -84,6 +84,8 @@ function revalidateAdminPaths() {
   revalidatePath(`${ADMIN_BASE_PATH}/placements`);
   revalidatePath(`${ADMIN_BASE_PATH}/moderation`);
   revalidatePath(`${ADMIN_BASE_PATH}/analytics`);
+  revalidatePath(`${ADMIN_BASE_PATH}/insights`);
+  revalidatePath("/insights");
   revalidatePath("/");
 }
 
@@ -690,4 +692,322 @@ export async function createSponsoredPlacementV2Action(formData: FormData) {
 
   revalidateAdminPaths();
   redirect(`${ADMIN_BASE_PATH}/placements?created=1`);
+}
+
+// ============================================================================
+// Insights / Articles System
+// ============================================================================
+
+const articleSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  slug: z.string().trim().min(3).max(80).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with dashes"),
+  summary: z.string().trim().max(500).optional().or(z.literal("")),
+  content: z.string().trim().min(10),
+  featuredImageUrl: z.string().trim().url().optional().or(z.literal("")),
+  featuredImageAlt: z.string().trim().max(200).optional().or(z.literal("")),
+  author: z.string().trim().max(100).default("Kelucalls Team"),
+  authorAvatarUrl: z.string().trim().url().optional().or(z.literal("")),
+  categoryId: z.string().uuid().optional().or(z.literal("")),
+  status: z.enum(["draft", "published", "scheduled", "archived"]).default("draft"),
+  publishedAt: z.string().trim().optional().or(z.literal("")),
+  scheduledAt: z.string().trim().optional().or(z.literal("")),
+  isFeatured: z.coerce.boolean().default(false),
+  isTrending: z.coerce.boolean().default(false),
+  isEditorPick: z.coerce.boolean().default(false),
+  readingTimeMinutes: z.coerce.number().int().min(1).max(120).default(5),
+  seoTitle: z.string().trim().max(70).optional().or(z.literal("")),
+  metaDescription: z.string().trim().max(160).optional().or(z.literal("")),
+  canonicalUrl: z.string().trim().url().optional().or(z.literal("")),
+  keywords: z.string().trim().optional().or(z.literal("")),
+  openGraphImageUrl: z.string().trim().url().optional().or(z.literal("")),
+  twitterCard: z.enum(["summary", "summary_large_image"]).default("summary_large_image"),
+  linkedTokenId: z.string().uuid().optional().or(z.literal("")),
+  linkedChannelId: z.string().uuid().optional().or(z.literal("")),
+  tagIds: z.array(z.string().uuid()).default([])
+});
+
+function slugifyArticle(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function getAvailableArticleSlug(base: string) {
+  const db = createAdminDb();
+  const normalizedBase = slugifyArticle(base) || "article";
+  let candidate = normalizedBase;
+  let suffix = 2;
+
+  while (true) {
+    const { data, error } = await db.from("articles").select("id").eq("slug", candidate).maybeSingle();
+    if (error) throw error;
+    if (!data) return candidate;
+    candidate = `${normalizedBase}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+export async function createArticleAction(formData: FormData) {
+  await requireAdminIdentity();
+
+  const tagIdsStr = String(formData.get("tagIds") || "[]");
+  let tagIds: string[] = [];
+  try {
+    tagIds = JSON.parse(tagIdsStr);
+  } catch {
+    tagIds = [];
+  }
+
+  const parsed = articleSchema.safeParse({
+    title: String(formData.get("title") || ""),
+    slug: String(formData.get("slug") || ""),
+    summary: String(formData.get("summary") || ""),
+    content: String(formData.get("content") || ""),
+    featuredImageUrl: String(formData.get("featuredImageUrl") || ""),
+    featuredImageAlt: String(formData.get("featuredImageAlt") || ""),
+    author: String(formData.get("author") || "Kelucalls Team"),
+    authorAvatarUrl: String(formData.get("authorAvatarUrl") || ""),
+    categoryId: String(formData.get("categoryId") || ""),
+    status: String(formData.get("status") || "draft"),
+    publishedAt: String(formData.get("publishedAt") || ""),
+    scheduledAt: String(formData.get("scheduledAt") || ""),
+    isFeatured: String(formData.get("isFeatured") || "false"),
+    isTrending: String(formData.get("isTrending") || "false"),
+    isEditorPick: String(formData.get("isEditorPick") || "false"),
+    readingTimeMinutes: String(formData.get("readingTimeMinutes") || "5"),
+    seoTitle: String(formData.get("seoTitle") || ""),
+    metaDescription: String(formData.get("metaDescription") || ""),
+    canonicalUrl: String(formData.get("canonicalUrl") || ""),
+    keywords: String(formData.get("keywords") || ""),
+    openGraphImageUrl: String(formData.get("openGraphImageUrl") || ""),
+    twitterCard: String(formData.get("twitterCard") || "summary_large_image"),
+    linkedTokenId: String(formData.get("linkedTokenId") || ""),
+    linkedChannelId: String(formData.get("linkedChannelId") || ""),
+    tagIds
+  });
+
+  if (!parsed.success) {
+    console.error("Article validation error:", parsed.error.flatten());
+    redirect(`${ADMIN_BASE_PATH}/insights?error=invalid`);
+  }
+
+  const db = createAdminDb();
+  const { data, error } = await db
+    .from("articles")
+    .insert({
+      title: parsed.data.title,
+      slug: parsed.data.slug,
+      summary: parsed.data.summary || null,
+      content: parsed.data.content,
+      featured_image_url: parsed.data.featuredImageUrl || null,
+      featured_image_alt: parsed.data.featuredImageAlt || null,
+      author: parsed.data.author,
+      author_avatar_url: parsed.data.authorAvatarUrl || null,
+      category_id: parsed.data.categoryId || null,
+      status: parsed.data.status,
+      published_at: parsed.data.publishedAt ? new Date(parsed.data.publishedAt).toISOString() : null,
+      scheduled_at: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt).toISOString() : null,
+      is_featured: parsed.data.isFeatured,
+      is_trending: parsed.data.isTrending,
+      is_editor_pick: parsed.data.isEditorPick,
+      reading_time_minutes: parsed.data.readingTimeMinutes,
+      seo_title: parsed.data.seoTitle || null,
+      meta_description: parsed.data.metaDescription || null,
+      canonical_url: parsed.data.canonicalUrl || null,
+      keywords: parsed.data.keywords ? parsed.data.keywords.split(",").map((k) => k.trim()).filter(Boolean) : null,
+      open_graph_image_url: parsed.data.openGraphImageUrl || null,
+      twitter_card: parsed.data.twitterCard,
+      linked_token_id: parsed.data.linkedTokenId || null,
+      linked_channel_id: parsed.data.linkedChannelId || null
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Article create error:", error);
+    throw error;
+  }
+
+  // Add tags
+  if (tagIds.length > 0 && data) {
+    const tagJunctions = tagIds.map((tagId) => ({
+      article_id: data.id,
+      tag_id: tagId
+    }));
+    await db.from("article_tags_junction").insert(tagJunctions);
+  }
+
+  await logAdminAudit("create_article", "articles", String(data.id), `Created article "${parsed.data.title}"`);
+
+  revalidateAdminPaths();
+  redirect(`${ADMIN_BASE_PATH}/insights?created=1`);
+}
+
+export async function updateArticleAction(formData: FormData) {
+  await requireAdminIdentity();
+
+  const articleId = String(formData.get("articleId") || "");
+  if (!articleId) redirect(`${ADMIN_BASE_PATH}/insights?error=invalid`);
+
+  const tagIdsStr = String(formData.get("tagIds") || "[]");
+  let tagIds: string[] = [];
+  try {
+    tagIds = JSON.parse(tagIdsStr);
+  } catch {
+    tagIds = [];
+  }
+
+  const parsed = articleSchema.partial().safeParse({
+    title: String(formData.get("title") || ""),
+    slug: String(formData.get("slug") || ""),
+    summary: String(formData.get("summary") || ""),
+    content: String(formData.get("content") || ""),
+    featuredImageUrl: String(formData.get("featuredImageUrl") || ""),
+    featuredImageAlt: String(formData.get("featuredImageAlt") || ""),
+    author: String(formData.get("author") || ""),
+    authorAvatarUrl: String(formData.get("authorAvatarUrl") || ""),
+    categoryId: String(formData.get("categoryId") || ""),
+    status: String(formData.get("status") || ""),
+    publishedAt: String(formData.get("publishedAt") || ""),
+    scheduledAt: String(formData.get("scheduledAt") || ""),
+    isFeatured: String(formData.get("isFeatured") || ""),
+    isTrending: String(formData.get("isTrending") || ""),
+    isEditorPick: String(formData.get("isEditorPick") || ""),
+    readingTimeMinutes: String(formData.get("readingTimeMinutes") || ""),
+    seoTitle: String(formData.get("seoTitle") || ""),
+    metaDescription: String(formData.get("metaDescription") || ""),
+    canonicalUrl: String(formData.get("canonicalUrl") || ""),
+    keywords: String(formData.get("keywords") || ""),
+    openGraphImageUrl: String(formData.get("openGraphImageUrl") || ""),
+    twitterCard: String(formData.get("twitterCard") || ""),
+    linkedTokenId: String(formData.get("linkedTokenId") || ""),
+    linkedChannelId: String(formData.get("linkedChannelId") || ""),
+    tagIds
+  });
+
+  if (!parsed.success) {
+    console.error("Article update validation error:", parsed.error.flatten());
+    redirect(`${ADMIN_BASE_PATH}/insights?error=invalid`);
+  }
+
+  const db = createAdminDb();
+  const updateData: Record<string, unknown> = {};
+
+  if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
+  if (parsed.data.slug !== undefined) updateData.slug = parsed.data.slug;
+  if (parsed.data.summary !== undefined) updateData.summary = parsed.data.summary;
+  if (parsed.data.content !== undefined) updateData.content = parsed.data.content;
+  if (parsed.data.featuredImageUrl !== undefined) updateData.featured_image_url = parsed.data.featuredImageUrl || null;
+  if (parsed.data.featuredImageAlt !== undefined) updateData.featured_image_alt = parsed.data.featuredImageAlt || null;
+  if (parsed.data.author !== undefined) updateData.author = parsed.data.author;
+  if (parsed.data.authorAvatarUrl !== undefined) updateData.author_avatar_url = parsed.data.authorAvatarUrl || null;
+  if (parsed.data.categoryId !== undefined) updateData.category_id = parsed.data.categoryId || null;
+  if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
+  if (parsed.data.publishedAt !== undefined) updateData.published_at = parsed.data.publishedAt ? new Date(parsed.data.publishedAt).toISOString() : null;
+  if (parsed.data.scheduledAt !== undefined) updateData.scheduled_at = parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt).toISOString() : null;
+  if (parsed.data.isFeatured !== undefined) updateData.is_featured = parsed.data.isFeatured;
+  if (parsed.data.isTrending !== undefined) updateData.is_trending = parsed.data.isTrending;
+  if (parsed.data.isEditorPick !== undefined) updateData.is_editor_pick = parsed.data.isEditorPick;
+  if (parsed.data.readingTimeMinutes !== undefined) updateData.reading_time_minutes = parsed.data.readingTimeMinutes;
+  if (parsed.data.seoTitle !== undefined) updateData.seo_title = parsed.data.seoTitle || null;
+  if (parsed.data.metaDescription !== undefined) updateData.meta_description = parsed.data.metaDescription || null;
+  if (parsed.data.canonicalUrl !== undefined) updateData.canonical_url = parsed.data.canonicalUrl || null;
+  if (parsed.data.keywords !== undefined) updateData.keywords = parsed.data.keywords ? parsed.data.keywords.split(",").map((k) => k.trim()).filter(Boolean) : null;
+  if (parsed.data.openGraphImageUrl !== undefined) updateData.open_graph_image_url = parsed.data.openGraphImageUrl || null;
+  if (parsed.data.twitterCard !== undefined) updateData.twitter_card = parsed.data.twitterCard;
+  if (parsed.data.linkedTokenId !== undefined) updateData.linked_token_id = parsed.data.linkedTokenId || null;
+  if (parsed.data.linkedChannelId !== undefined) updateData.linked_channel_id = parsed.data.linkedChannelId || null;
+
+  const { error } = await db.from("articles").update(updateData).eq("id", articleId);
+
+  if (error) {
+    console.error("Article update error:", error);
+    throw error;
+  }
+
+  // Update tags if provided
+  if (tagIds.length > 0 || formData.get("tagIds")) {
+    await db.from("article_tags_junction").delete().eq("article_id", articleId);
+    if (tagIds.length > 0) {
+      const tagJunctions = tagIds.map((tagId) => ({
+        article_id: articleId,
+        tag_id: tagId
+      }));
+      await db.from("article_tags_junction").insert(tagJunctions);
+    }
+  }
+
+  await logAdminAudit("update_article", "articles", articleId, `Updated article`);
+
+  revalidateAdminPaths();
+  redirect(`${ADMIN_BASE_PATH}/insights?edit=${articleId}&saved=1`);
+}
+
+export async function deleteArticleAction(formData: FormData) {
+  await requireAdminIdentity();
+  const articleId = String(formData.get("articleId") || "");
+  if (!articleId) redirect(`${ADMIN_BASE_PATH}/insights?error=invalid`);
+
+  const db = createAdminDb();
+  const { data: article } = await db.from("articles").select("title").eq("id", articleId).single();
+
+  const { error } = await db.from("articles").delete().eq("id", articleId);
+  if (error) throw error;
+
+  await logAdminAudit("delete_article", "articles", articleId, `Deleted article "${article?.title ?? articleId}"`);
+
+  revalidateAdminPaths();
+  redirect(`${ADMIN_BASE_PATH}/insights?deleted=1`);
+}
+
+export async function createArticleCategoryAction(formData: FormData) {
+  await requireAdminIdentity();
+
+  const name = String(formData.get("name") || "").trim();
+  const slug = String(formData.get("slug") || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const description = String(formData.get("description") || "").trim();
+  const color = String(formData.get("color") || "#22d3ee").trim();
+  const sortOrder = Number(formData.get("sortOrder") || "0");
+
+  if (!name || !slug) redirect(`${ADMIN_BASE_PATH}/insights?error=invalid`);
+
+  const db = createAdminDb();
+  const { error } = await db.from("article_categories").insert({
+    name,
+    slug,
+    description: description || null,
+    color,
+    sort_order: sortOrder
+  });
+
+  if (error) throw error;
+
+  await logAdminAudit("create_article_category", "article_categories", slug, `Created category "${name}"`);
+
+  revalidateAdminPaths();
+  redirect(`${ADMIN_BASE_PATH}/insights?created=1`);
+}
+
+export async function createArticleTagAction(formData: FormData) {
+  await requireAdminIdentity();
+
+  const name = String(formData.get("name") || "").trim();
+  const slug = String(formData.get("slug") || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+  if (!name || !slug) redirect(`${ADMIN_BASE_PATH}/insights?error=invalid`);
+
+  const db = createAdminDb();
+  const { error } = await db.from("article_tags").insert({ name, slug });
+
+  if (error) throw error;
+
+  await logAdminAudit("create_article_tag", "article_tags", slug, `Created tag "${name}"`);
+
+  revalidateAdminPaths();
+  redirect(`${ADMIN_BASE_PATH}/insights?created=1`);
+}
+
+export async function generateArticleSlugAction(title: string) {
+  return getAvailableArticleSlug(title);
 }

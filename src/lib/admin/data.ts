@@ -300,3 +300,378 @@ export async function getAnalyticsSummary() {
     })
   };
 }
+
+// ============================================================================
+// Insights / Articles System
+// ============================================================================
+
+export async function listArticleCategories() {
+  const db = createAdminDb();
+  const { data, error } = await db
+    .from("article_categories")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    color: string | null;
+    icon: string | null;
+    sort_order: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  }>;
+}
+
+export async function listArticleTags() {
+  const db = createAdminDb();
+  const { data, error } = await db
+    .from("article_tags")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    created_at: string;
+  }>;
+}
+
+export async function listArticles(options?: {
+  status?: string;
+  categoryId?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = createAdminDb();
+  let query = db
+    .from("articles")
+    .select(`
+      *,
+      category:article_categories(id, name, slug, color)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (options?.status) {
+    query = query.eq("status", options.status);
+  }
+  if (options?.categoryId) {
+    query = query.eq("category_id", options.categoryId);
+  }
+  if (options?.limit) {
+    query = query.limit(options.limit);
+  }
+  if (options?.offset) {
+    query = query.range(options.offset, options.offset + (options.limit ?? 10) - 1);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) throw error;
+
+  return {
+    articles: (data ?? []) as Array<Record<string, unknown>>,
+    total: count ?? 0
+  };
+}
+
+export async function getArticleById(id: string) {
+  const db = createAdminDb();
+  const { data, error } = await db
+    .from("articles")
+    .select(`
+      *,
+      category:article_categories(id, name, slug, color),
+      tags:article_tags_junction(
+        tag:article_tags(id, name, slug)
+      )
+    `)
+    .eq("id", id)
+    .single();
+
+  if (error) throw error;
+  return data as Record<string, unknown> | null;
+}
+
+export async function createArticle(article: {
+  title: string;
+  slug: string;
+  summary?: string;
+  content: string;
+  featured_image_url?: string;
+  featured_image_alt?: string;
+  author?: string;
+  author_avatar_url?: string;
+  category_id?: string;
+  status?: string;
+  published_at?: string;
+  scheduled_at?: string;
+  is_featured?: boolean;
+  is_trending?: boolean;
+  is_editor_pick?: boolean;
+  reading_time_minutes?: number;
+  seo_title?: string;
+  meta_description?: string;
+  canonical_url?: string;
+  keywords?: string[];
+  open_graph_image_url?: string;
+  twitter_card?: string;
+  linked_token_id?: string;
+  linked_channel_id?: string;
+  tag_ids?: string[];
+}) {
+  const db = createAdminDb();
+
+  const articleData = {
+    title: article.title,
+    slug: article.slug,
+    summary: article.summary,
+    content: article.content,
+    featured_image_url: article.featured_image_url,
+    featured_image_alt: article.featured_image_alt,
+    author: article.author ?? "Kelucalls Team",
+    author_avatar_url: article.author_avatar_url,
+    category_id: article.category_id,
+    status: article.status ?? "draft",
+    published_at: article.published_at,
+    scheduled_at: article.scheduled_at,
+    is_featured: article.is_featured ?? false,
+    is_trending: article.is_trending ?? false,
+    is_editor_pick: article.is_editor_pick ?? false,
+    reading_time_minutes: article.reading_time_minutes ?? 5,
+    seo_title: article.seo_title,
+    meta_description: article.meta_description,
+    canonical_url: article.canonical_url,
+    keywords: article.keywords,
+    open_graph_image_url: article.open_graph_image_url,
+    twitter_card: article.twitter_card ?? "summary_large_image",
+    linked_token_id: article.linked_token_id,
+    linked_channel_id: article.linked_channel_id
+  };
+
+  const { data, error } = await db
+    .from("articles")
+    .insert(articleData)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Add tags if provided
+  if (article.tag_ids && article.tag_ids.length > 0 && data) {
+    const tagJunctions = article.tag_ids.map((tagId) => ({
+      article_id: data.id,
+      tag_id: tagId
+    }));
+
+    await db.from("article_tags_junction").insert(tagJunctions);
+  }
+
+  return data;
+}
+
+export async function updateArticle(
+  id: string,
+  article: {
+    title?: string;
+    slug?: string;
+    summary?: string;
+    content?: string;
+    featured_image_url?: string;
+    featured_image_alt?: string;
+    author?: string;
+    author_avatar_url?: string;
+    category_id?: string;
+    status?: string;
+    published_at?: string;
+    scheduled_at?: string;
+    is_featured?: boolean;
+    is_trending?: boolean;
+    is_editor_pick?: boolean;
+    reading_time_minutes?: number;
+    seo_title?: string;
+    meta_description?: string;
+    canonical_url?: string;
+    keywords?: string[];
+    open_graph_image_url?: string;
+    twitter_card?: string;
+    linked_token_id?: string;
+    linked_channel_id?: string;
+    tag_ids?: string[];
+  }
+) {
+  const db = createAdminDb();
+
+  const updateData: Record<string, unknown> = {};
+  if (article.title !== undefined) updateData.title = article.title;
+  if (article.slug !== undefined) updateData.slug = article.slug;
+  if (article.summary !== undefined) updateData.summary = article.summary;
+  if (article.content !== undefined) updateData.content = article.content;
+  if (article.featured_image_url !== undefined) updateData.featured_image_url = article.featured_image_url;
+  if (article.featured_image_alt !== undefined) updateData.featured_image_alt = article.featured_image_alt;
+  if (article.author !== undefined) updateData.author = article.author;
+  if (article.author_avatar_url !== undefined) updateData.author_avatar_url = article.author_avatar_url;
+  if (article.category_id !== undefined) updateData.category_id = article.category_id;
+  if (article.status !== undefined) updateData.status = article.status;
+  if (article.published_at !== undefined) updateData.published_at = article.published_at;
+  if (article.scheduled_at !== undefined) updateData.scheduled_at = article.scheduled_at;
+  if (article.is_featured !== undefined) updateData.is_featured = article.is_featured;
+  if (article.is_trending !== undefined) updateData.is_trending = article.is_trending;
+  if (article.is_editor_pick !== undefined) updateData.is_editor_pick = article.is_editor_pick;
+  if (article.reading_time_minutes !== undefined) updateData.reading_time_minutes = article.reading_time_minutes;
+  if (article.seo_title !== undefined) updateData.seo_title = article.seo_title;
+  if (article.meta_description !== undefined) updateData.meta_description = article.meta_description;
+  if (article.canonical_url !== undefined) updateData.canonical_url = article.canonical_url;
+  if (article.keywords !== undefined) updateData.keywords = article.keywords;
+  if (article.open_graph_image_url !== undefined) updateData.open_graph_image_url = article.open_graph_image_url;
+  if (article.twitter_card !== undefined) updateData.twitter_card = article.twitter_card;
+  if (article.linked_token_id !== undefined) updateData.linked_token_id = article.linked_token_id;
+  if (article.linked_channel_id !== undefined) updateData.linked_channel_id = article.linked_channel_id;
+
+  const { data, error } = await db
+    .from("articles")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Update tags if provided
+  if (article.tag_ids !== undefined) {
+    // Delete existing tags
+    await db.from("article_tags_junction").delete().eq("article_id", id);
+
+    // Add new tags
+    if (article.tag_ids.length > 0) {
+      const tagJunctions = article.tag_ids.map((tagId) => ({
+        article_id: id,
+        tag_id: tagId
+      }));
+      await db.from("article_tags_junction").insert(tagJunctions);
+    }
+  }
+
+  return data;
+}
+
+export async function deleteArticle(id: string) {
+  const db = createAdminDb();
+  const { error } = await db.from("articles").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function createArticleCategory(category: {
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  sort_order?: number;
+}) {
+  const db = createAdminDb();
+  const { data, error } = await db
+    .from("article_categories")
+    .insert({
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      color: category.color ?? "#22d3ee",
+      icon: category.icon,
+      sort_order: category.sort_order ?? 0
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateArticleCategory(
+  id: string,
+  category: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    color?: string;
+    icon?: string;
+    sort_order?: number;
+    is_active?: boolean;
+  }
+) {
+  const db = createAdminDb();
+  const { data, error } = await db
+    .from("article_categories")
+    .update(category)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteArticleCategory(id: string) {
+  const db = createAdminDb();
+  const { error } = await db.from("article_categories").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function createArticleTag(tag: {
+  name: string;
+  slug: string;
+}) {
+  const db = createAdminDb();
+  const { data, error } = await db
+    .from("article_tags")
+    .insert({
+      name: tag.name,
+      slug: tag.slug
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteArticleTag(id: string) {
+  const db = createAdminDb();
+  const { error } = await db.from("article_tags").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getInsightsStats() {
+  const db = createAdminDb();
+
+  const [
+    totalArticles,
+    publishedArticles,
+    draftArticles,
+    scheduledArticles,
+    totalViews,
+    categoriesResult
+  ] = await Promise.all([
+    db.from("articles").select("id", { count: "exact" }),
+    db.from("articles").select("id", { count: "exact" }).eq("status", "published"),
+    db.from("articles").select("id", { count: "exact" }).eq("status", "draft"),
+    db.from("articles").select("id", { count: "exact" }).eq("status", "scheduled"),
+    db.from("article_views").select("id", { count: "exact" }),
+    db.from("article_categories").select("id, name, slug")
+  ]);
+
+  return {
+    totalArticles: totalArticles.count ?? 0,
+    publishedArticles: publishedArticles.count ?? 0,
+    draftArticles: draftArticles.count ?? 0,
+    scheduledArticles: scheduledArticles.count ?? 0,
+    totalViews: totalViews.count ?? 0,
+    categories: (categoriesResult.data ?? []) as Array<{ id: string; name: string; slug: string }>
+  };
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { uploadAdBannerAction } from "@/app/kx-admin/actions";
 
 /**
  * AdBannerUploader
@@ -35,6 +36,11 @@ export function AdBannerUploader() {
 
     const fd = new FormData();
     fd.append("bannerFile", file);
+
+     const result = await uploadAdBannerAction(fd); // server action, not fetch()
+      if (result.error) {
+      setUploadError(result.error);
+      }
 
     try {
       const res    = await fetch("/api/admin/upload-banner", { method: "POST", body: fd });

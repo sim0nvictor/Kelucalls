@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { updateChannelAction, deleteChannelAction } from "@/app/kx-admin/actions";
 import { ChannelAvatar } from "@/components/channel-avatar";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 
 type PageProps = {
   searchParams: Promise<{ saved?: string; error?: string; edit?: string; deleted?: string }>;
@@ -189,18 +190,11 @@ export default async function AdminChannelsPage({ searchParams }: PageProps) {
                               TG ↗
                             </Button>
                           </a>
-                          <form
-                            action={deleteChannelAction}
-                            onSubmit={(e) => {
-                              if (!confirm(`Are you sure you want to permanently delete "${channel.title}"? This action cannot be undone.`)) {
-                                e.preventDefault();
-                              }
-                            }}
-                          >
+                          <form action={deleteChannelAction}>
                             <input type="hidden" name="channelId" value={channel.id} />
-                            <Button variant="ghost" size="sm" className="text-xs text-red-400 hover:text-red-300">
-                              Delete
-                            </Button>
+                              <ConfirmDeleteButton
+                              confirmMessage={`Permanently delete "${channel.title}"? This cannot be undone.`}
+                            />
                           </form>
                         </div>
                       </div>
