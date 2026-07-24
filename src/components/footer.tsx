@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Send, Bot } from "lucide-react";
+import { siteConfig } from "@/config/site";
 
 function XIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -12,17 +13,17 @@ function XIcon(props: React.SVGProps<SVGSVGElement>) {
 const contactLinks = [
   {
     label: "X",
-    href: "https://x.com/kelucallsx?s=20",
+    href: siteConfig.social.x,
     icon: XIcon,
   },
   {
     label: "Telegram",
-    href: "https://t.me/kELUSCALLGOOOO",
+    href: siteConfig.social.telegram,
     icon: Send,
   },
   {
     label: "Bot",
-    href: "https://t.me/KeluCallsAlerts_bot",
+    href: siteConfig.social.telegramBot,
     icon: Bot,
   },
 ];
@@ -157,7 +158,7 @@ export function Footer() {
 
         {/* Description */}
         <div className="flex flex-col gap-2 border-t border-white/8 pt-6">
-          <p>Kelucalls ranks Telegram crypto channels on realized call performance.</p>
+          <p>{siteConfig.name} ranks Telegram crypto channels on realized call performance.</p>
           <p>Sponsored placements are labeled separately and never alter leaderboard scores.</p>
         </div>
 
@@ -187,7 +188,7 @@ export function Footer() {
           <span>
             Built by{" "}
             <a
-              href="https://sevmeta.xyz"
+              href={siteConfig.partners.sevmeta}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-400 transition-colors hover:text-blue-300"
@@ -199,7 +200,7 @@ export function Footer() {
           <span>
             Partners with{" "}
             <a
-              href="https://sevlabx.xyz"
+              href={siteConfig.partners.sevlabx}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-400 transition-colors hover:text-blue-300"
@@ -207,6 +208,10 @@ export function Footer() {
               SevLabs
             </a>
           </span>
+        </div>
+        <div className="mt-4 text-center text-xs text-slate-500 justify-center sm:mt-2">
+          all rights reserved @ {new Date().getFullYear()} {siteConfig.name}
+
         </div>
 
       </div>

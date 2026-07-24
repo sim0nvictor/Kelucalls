@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Community Guidelines | Kelucalls",
+  title: `Community Guidelines | ${siteConfig.name}`,
   description:
-    "Community Guidelines for Kelucalls - Understanding acceptable behavior and prohibited activities on our platform.",
+    `Community Guidelines for ${siteConfig.name} - Understanding acceptable behavior and prohibited activities on our platform.`,
   alternates: {
     canonical: "/community-guidelines",
   },
@@ -189,8 +190,8 @@ export default function CommunityGuidelinesPage() {
         </li>
         <li>
           Email:{" "}
-          <a href="mailto:safety@kelucalls.com" className="text-cyan-400 hover:underline">
-            safety@kelucalls.com
+          <a href={mailto("safety")} className="text-cyan-400 hover:underline">
+            {siteConfig.email.safety}
           </a>
         </li>
       </ul>
@@ -203,8 +204,8 @@ export default function CommunityGuidelinesPage() {
       <p>
         If you have questions about these Community Guidelines, please contact us
         at{" "}
-        <a href="mailto:support@kelucalls.com" className="text-cyan-400 hover:underline">
-          support@kelucalls.com
+        <a href={mailto("support")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.support}
         </a>
         .
       </p>

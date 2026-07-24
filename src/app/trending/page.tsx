@@ -9,12 +9,13 @@ import { formatMultiple, formatPercent } from "@/lib/metrics";
 import { TrendingTokenChart } from "./token-chart";
 import { TokenAvatar } from "@/components/token-avatar";
 import { SponsoredTokenCard } from "@/components/sponsored-placement-card";
+import { siteConfig } from "@/config/site";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Trending Tokens | Kelucalls",
+  title: `Trending Tokens | ${siteConfig.name}`,
   description: "Discover the hottest tokens being called across tracked channels"
 };
 

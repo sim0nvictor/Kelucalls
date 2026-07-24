@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { withSupabase } from "@/lib/supabase";
+import { siteConfig } from "@/config/site";
 
 /**
  * Dynamic sitemap for kelucalls.com
@@ -18,7 +19,7 @@ import { withSupabase } from "@/lib/supabase";
  * disallowed in robots.ts so it never gets discovered or indexed.
  */
 
-const BASE_URL = "https://kelucalls.com";
+const BASE_URL = siteConfig.url;
 
 export const revalidate = 3600; // regenerate at most once an hour
 

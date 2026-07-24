@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Card, CardContent } from "@/components/ui/card";
+import { siteConfig, } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Contact | Kelucalls",
+  title: `Contact | ${siteConfig.name}`,
   description:
-    "Get in touch with the Kelucalls team for partnerships, support, press, or general questions.",
+    `Get in touch with the ${siteConfig.name} team for partnerships, support, press, or general questions.`,
   alternates: {
     canonical: "/contact",
   },

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Advertiser Policy | Kelucalls",
+  title: `Advertiser Policy | ${siteConfig.name}`,
   description:
-    "Advertising Policy for Kelucalls - Learn about our advertising guidelines, approval process, and prohibited content.",
+    `Advertising Policy for ${siteConfig.name} - Learn about our advertising guidelines, approval process, and prohibited content.`,
   alternates: {
     canonical: "/advertiser-policy",
   },
@@ -209,8 +210,8 @@ export default function AdvertiserPolicyPage() {
       <h2 id="contact">Contact</h2>
       <p>
         To inquire about advertising opportunities, please contact us at{" "}
-        <a href="mailto:ads@kelucalls.com" className="text-cyan-400 hover:underline">
-          ads@kelucalls.com
+        <a href={mailto("ads")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.ads}
         </a>{" "}
         or through our{" "}
         <a href="/contact" className="text-cyan-400 hover:underline">

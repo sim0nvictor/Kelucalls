@@ -9,6 +9,7 @@ import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, Arro
 import Logo from "@/assets/logo.jpg";
 import { Button } from "@/components/ui/button";
 import { formatPercent } from "@/lib/metrics";
+import { siteConfig } from "@/config/site";
 
 const navLinks = [
   { href: "/",           label: "Home",       icon: Home },
@@ -207,9 +208,9 @@ export function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
-          <Image src={Logo} alt="Kelucalls" className="h-11 w-auto rounded-full object-cover" />
+          <Image src={Logo} alt={siteConfig.name} className="h-11 w-auto rounded-full object-cover" />
           <div className="hidden sm:block">
-            <div className="text-sm font-bold uppercase tracking-wider text-white">Kelucalls</div>
+            <div className="text-sm font-bold uppercase tracking-wider text-white">{siteConfig.name}</div>
             <div className="text-[10px] text-slate-500">Call Intelligence</div>
           </div>
         </Link>

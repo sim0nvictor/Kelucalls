@@ -16,11 +16,12 @@ import {
   ExternalLink,
   Send,
 } from "lucide-react";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Help Center | Kelucalls",
+  title: `Help Center | ${siteConfig.name}`,
   description:
-    "Find answers to your questions about Kelucalls, our ranking methodology, channel submissions, and more.",
+    `Find answers to your questions about ${siteConfig.name}, our ranking methodology, channel submissions, and more.`,
   alternates: {
     canonical: "/help",
   },

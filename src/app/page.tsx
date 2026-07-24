@@ -11,6 +11,7 @@ import { formatCompactCurrency, formatMultiple, formatPercent } from "@/lib/metr
 import type { RankingMode } from "@/types/kelucalls";
 import { LeaderboardWithPlacements } from "@/components/leaderboard-with-placements";
 import { SponsoredTokenCard } from "@/components/sponsored-placement-card";
+import { siteConfig } from "@/config/site";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -50,7 +51,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <Badge>Performance-first intelligence</Badge>
             <div className="space-y-4">
               <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Kelucalls ranks Telegram crypto channels on what they actually deliver.
+                {siteConfig.name} ranks Telegram crypto channels on what they actually deliver.
               </h1>
               <p className="max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
                 Track ROI, win rate, simulated PnL, and breakout multiples from real call timestamps.

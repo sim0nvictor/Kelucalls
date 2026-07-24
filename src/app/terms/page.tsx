@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Terms and Conditions | Kelucalls",
+  title: `Terms and Conditions | ${siteConfig.name}`,
   description:
-    "Terms and Conditions for Kelucalls - Understanding the rules and guidelines for using our crypto intelligence platform.",
+    `Terms and Conditions for ${siteConfig.name} - Understanding the rules and guidelines for using our crypto intelligence platform.`,
   alternates: {
     canonical: "/terms",
   },
@@ -185,8 +186,8 @@ export default function TermsPage() {
       <h2 id="contact">12. Contact Information</h2>
       <p>
         If you have any questions about these Terms, please contact us at{" "}
-        <a href="mailto:support@kelucalls.com" className="text-cyan-400 hover:underline">
-          support@kelucalls.com
+        <a href={mailto("support")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.support}
         </a>{" "}
         or through our{" "}
         <a href="/contact" className="text-cyan-400 hover:underline">

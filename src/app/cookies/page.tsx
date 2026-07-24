@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy | Kelucalls",
+  title: `Cookie Policy | ${siteConfig.name}`,
   description:
-    "Cookie Policy for Kelucalls - Learn about the cookies we use and how to manage them.",
+    `Cookie Policy for ${siteConfig.name} - Learn about the cookies we use and how to manage them.`,
   alternates: {
     canonical: "/cookies",
   },
@@ -155,8 +156,8 @@ export default function CookiesPage() {
       <h2 id="contact">6. Contact Us</h2>
       <p>
         If you have any questions about our use of cookies, please contact us at{" "}
-        <a href="mailto:privacy@kelucalls.com" className="text-cyan-400 hover:underline">
-          privacy@kelucalls.com
+        <a href={mailto("privacy")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.privacy}
         </a>
         .
       </p>

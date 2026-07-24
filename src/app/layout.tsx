@@ -5,16 +5,47 @@ import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
 import { AdPopup } from "@/components/ad-popup";
 import { getActiveAds } from "@/lib/dashboard-data";
+import { siteConfig } from "@/config/site";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kelucalls | Telegram Call Intelligence",
-  description:
-    "A production-ready intelligence layer for ranking Telegram crypto call channels on ROI, win rate, and simulated PnL.",
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  metadataBase: new URL(siteConfig.url),
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [
+      {
+        url: `${siteConfig.url}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: siteConfig.name,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    creator: "@kelucalls",
+    images: [`${siteConfig.url}/og-image.png`],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

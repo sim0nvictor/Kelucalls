@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Listing Policy | Kelucalls",
+  title: `Listing Policy | ${siteConfig.name}`,
   description:
-    "Listing Policy for Kelucalls - Learn about channel eligibility, submission requirements, and review processes.",
+    `Listing Policy for ${siteConfig.name} - Learn about channel eligibility, submission requirements, and review processes.`,
   alternates: {
     canonical: "/listing-policy",
   },
@@ -186,8 +187,8 @@ export default function ListingPolicyPage() {
       <h2 id="contact">Questions</h2>
       <p>
         If you have questions about the listing process, please contact us at{" "}
-        <a href="mailto:listings@kelucalls.com" className="text-cyan-400 hover:underline">
-          listings@kelucalls.com
+        <a href={mailto("listings")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.listings}
         </a>
         .
       </p>

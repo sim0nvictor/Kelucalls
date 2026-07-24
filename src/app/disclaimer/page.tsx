@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { AlertTriangle, TrendingDown } from "lucide-react";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Disclaimer | Kelucalls",
+  title: `Disclaimer | ${siteConfig.name}`,
   description:
-    "Important disclaimer about using Kelucalls - Understand the risks associated with cryptocurrency trading signals.",
+    `Important disclaimer about using ${siteConfig.name} - Understand the risks associated with cryptocurrency trading signals.`,
   alternates: {
     canonical: "/disclaimer",
   },
@@ -154,8 +155,8 @@ export default function DisclaimerPage() {
       <h2 id="contact">8. Questions</h2>
       <p>
         If you have questions about this disclaimer, please contact us at{" "}
-        <a href="mailto:support@kelucalls.com" className="text-cyan-400 hover:underline">
-          support@kelucalls.com
+        <a href={mailto("support")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.support}
         </a>
         .
       </p>

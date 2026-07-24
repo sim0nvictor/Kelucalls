@@ -4,11 +4,12 @@ import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Brain, TrendingUp, Target, BarChart3, Clock, Award } from "lucide-react";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Ranking Methodology | Kelucalls",
+  title: `Ranking Methodology | ${siteConfig.name}`,
   description:
-    "Learn how Kelucalls ranks Telegram crypto channels - Understand our Smart Score, ROI calculations, and ranking metrics.",
+    `Learn how ${siteConfig.name} ranks Telegram crypto channels - Understand our Smart Score, ROI calculations, and ranking metrics.`,
   alternates: {
     canonical: "/ranking-methodology",
   },
@@ -292,8 +293,8 @@ export default function RankingMethodologyPage() {
       </ul>
       <p>
         If you have questions about our methodology, please contact us at{" "}
-        <a href="mailto:support@kelucalls.com" className="text-cyan-400 hover:underline">
-          support@kelucalls.com
+        <a href={mailto("support")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.support}
         </a>
         .
       </p>

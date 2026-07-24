@@ -8,12 +8,13 @@ import { formatMultiple, formatPercent } from "@/lib/metrics";
 import { LiveFeedTicker } from "./live-ticker";
 import { SponsoredTokenCard } from "@/components/sponsored-placement-card";
 import { TokenAvatar } from "@/components/token-avatar";
+import { siteConfig } from "@/config/site";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Live Feed | Kelucalls",
+  title: `Live Feed | ${siteConfig.name}`,
   description: "Real-time feed of crypto calls as they happen across tracked channels"
 };
 

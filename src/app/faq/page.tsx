@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { Accordion, type AccordionItem } from "@/components/ui/accordion"
 import { SearchBar } from "@/components/ui/search-bar"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
+import { siteConfig } from "@/config/site";
 
 
 export const metadata: Metadata = {
-  title: "FAQ | Kelucalls",
+  title: `FAQ | ${siteConfig.name}`,
   description:
-    "Frequently asked questions about Kelucalls, ranking methodology, channel submissions, and crypto signal tracking.",
+    `Frequently asked questions about ${siteConfig.name}, ranking methodology, channel submissions, and crypto signal tracking.`,
   alternates: {
     canonical: "/faq",
   },

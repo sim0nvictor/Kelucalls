@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
+import { siteConfig, mailto } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Kelucalls",
+  title: `Privacy Policy | ${siteConfig.name}`,
   description:
-    "Privacy Policy for Kelucalls - Learn how we collect, use, and protect your data on our crypto intelligence platform.",
+    `Privacy Policy for ${siteConfig.name} - Learn how we collect, use, and protect your data on our crypto intelligence platform.`,
   alternates: {
     canonical: "/privacy",
   },
@@ -167,8 +168,8 @@ export default function PrivacyPage() {
       </ul>
       <p>
         To exercise these rights, please contact us at{" "}
-        <a href="mailto:privacy@kelucalls.com" className="text-cyan-400 hover:underline">
-          privacy@kelucalls.com
+        <a href={mailto("privacy")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.privacy}
         </a>
         .
       </p>
@@ -176,8 +177,8 @@ export default function PrivacyPage() {
       <h2 id="contact">9. Contact Us</h2>
       <p>
         If you have any questions about this Privacy Policy, please contact us at{" "}
-        <a href="mailto:privacy@kelucalls.com" className="text-cyan-400 hover:underline">
-          privacy@kelucalls.com
+        <a href={mailto("privacy")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.privacy}
         </a>{" "}
         or through our{" "}
         <a href="/contact" className="text-cyan-400 hover:underline">

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { siteConfig } from "@/config/site";
 
 /**
  * Place this file at: src/app/robots.ts
@@ -13,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/kx-admin", "/kx-admin/*", "/api/"],
       },
     ],
-    sitemap: "https://kelucalls.com/sitemap.xml",
-    host: "https://kelucalls.com",
+    sitemap: `${siteConfig.url}/sitemap.xml`,
+    host: siteConfig.url,
   };
 }

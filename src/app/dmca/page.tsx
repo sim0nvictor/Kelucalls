@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/legal-layout";
 import { Callout } from "@/components/ui/callout";
 import { TOCItem } from "@/components/ui/table-of-contents";
+import { siteConfig, mailto } from "@/config/site";
+
 export const metadata: Metadata = {
-  title: "DMCA | Kelucalls",
+  title: `DMCA | ${siteConfig.name}`,
   description:
     "DMCA Copyright Removal Request - Submit copyright infringement notices to Kelucalls.",
   alternates: {
@@ -84,8 +86,8 @@ export default function DMCAPage() {
       <h3>Where to Send</h3>
       <p>
         Send your DMCA notice to our designated agent at:{" "}
-        <a href="mailto:dmca@kelucalls.com" className="text-cyan-400 hover:underline">
-          dmca@kelucalls.com
+        <a href={mailto("dmca")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.dmca}
         </a>
       </p>
 
@@ -118,16 +120,16 @@ export default function DMCAPage() {
       </ol>
       <p>
         Counter-notices should be sent to{" "}
-        <a href="mailto:dmca@kelucalls.com" className="text-cyan-400 hover:underline">
-          dmca@kelucalls.com
+        <a href={mailto("dmca")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.dmca}
         </a>
       </p>
 
       <h2 id="contact">Contact</h2>
       <p>
         For DMCA-related questions, please contact us at{" "}
-        <a href="mailto:dmca@kelucalls.com" className="text-cyan-400 hover:underline">
-          dmca@kelucalls.com
+        <a href={mailto("dmca")} className="text-cyan-400 hover:underline">
+          {siteConfig.email.dmca}
         </a>
       </p>
     </LegalLayout>

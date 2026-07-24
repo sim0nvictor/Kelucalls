@@ -8,12 +8,13 @@ import { getTrendingTokens } from "@/lib/dashboard-data";
 import { formatMultiple, formatPercent } from "@/lib/metrics";
 import { TokenPriceChart } from "./price-chart";
 import { TokenAvatar } from "@/components/token-avatar";
+import { siteConfig } from "@/config/site";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Token Analytics | Kelucalls",
+  title: `Token Analytics | ${siteConfig.name}`,
   description: "Deep analytics on tokens across all tracked channels"
 };
 

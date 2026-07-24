@@ -7,9 +7,10 @@ import { getDashboardSnapshot } from "@/lib/dashboard-data";
 import { formatPercent, formatCompactCurrency } from "@/lib/metrics";
 import { TopCallersChart } from "./callers-chart";
 import { ChannelAvatar } from "@/components/channel-avatar";
+import { siteConfig } from "@/config/site";
 
 export const metadata = {
-  title: "Top Callers | Kelucalls",
+  title: `Top Callers | ${siteConfig.name}`,
   description: "The most profitable Telegram crypto call channels ranked by performance"
 };
 
