@@ -701,7 +701,7 @@ export async function createSponsoredPlacementV2Action(formData: FormData) {
 const articleSchema = z.object({
   title: z.string().trim().min(3).max(200),
   slug: z.string().trim().min(3).max(80).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with dashes"),
-  summary: z.string().trim().max(500).optional().or(z.literal("")),
+  summary: z.string().trim().max(1000).optional().or(z.literal("")),
   content: z.string().trim().min(10),
   featuredImageUrl: z.string().trim().url().optional().or(z.literal("")),
   featuredImageAlt: z.string().trim().max(200).optional().or(z.literal("")),

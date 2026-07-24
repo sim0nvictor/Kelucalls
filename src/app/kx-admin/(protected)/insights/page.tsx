@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus, Edit, Trash2, Eye, Calendar, Tag, FileText, TrendingUp, Star } from "lucide-react";
+import { Plus, Edit, Eye, Calendar, Tag, FileText, TrendingUp, Star } from "lucide-react";
 
 import { requireAdminIdentity } from "@/lib/admin/auth";
 import { ADMIN_BASE_PATH } from "@/lib/admin/constants";
@@ -409,10 +409,6 @@ function ArticleEditorForm({
   tags: Array<{ id: string; name: string; slug: string }>;
   articleId?: string;
 }) {
-  const action = articleId ? "updateArticleAction" : "createArticleAction";
-  const actionImport = articleId
-    ? `const { updateArticleAction } = await import("@/app/kx-admin/actions");`
-    : `const { createArticleAction } = await import("@/app/kx-admin/actions");`;
 
   return (
     <form
@@ -457,14 +453,16 @@ function ArticleEditorForm({
 
       <div className="space-y-2">
         <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
-          Summary
+           Summary
         </label>
         <textarea
           name="summary"
           rows={3}
+          maxLength={1000}
           className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
           placeholder="Brief summary of the article..."
         />
+        <p className="text-xs text-slate-600">Max 1000 characters.</p>
       </div>
 
       <div className="space-y-2">

@@ -44,7 +44,7 @@ function useDebounce<T extends (...args: Parameters<T>) => void>(fn: T, ms: numb
 }
 
 // ── Search dropdown ────────────────────────────────────────────────────────
-function SearchBox({ mobile = false }: { mobile?: boolean }) {
+export function SearchBox({ mobile = false }: { mobile?: boolean }) {
   const router = useRouter();
   const [query, setQuery]         = useState("");
   const [open, setOpen]           = useState(false);
@@ -215,12 +215,15 @@ export function Navbar() {
         </Link>
 
         {/* Desktop search */}
-        <div className="hidden md:block">
+        <div className="hidden shrink-0 md:block">
           <SearchBox />
         </div>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 lg:gap-2 xl:gap-4 md:flex">
+        <nav
+          className="nav-scroll hidden min-w-0 flex-1 flex-nowrap items-center justify-end gap-0.5 overflow-x-auto md:flex xl:gap-1"
+          style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(34,211,238,0.35) transparent" }}
+        >
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             const Icon = link.icon;
@@ -228,14 +231,15 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+                title={link.label}
+                className={`group relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-2.5 py-2 text-sm font-medium transition-all ${
                   isActive
                     ? "bg-cyan-500/15 text-cyan-300"
                     : "text-slate-400 hover:bg-white/8 hover:text-white"
                 }`}
               >
-                <Icon className={`size-4 ${isActive ? "text-cyan-400" : ""}`} />
-                <span className="hidden lg:inline">{link.label}</span>
+                <Icon className={`size-4 shrink-0 ${isActive ? "text-cyan-400" : ""}`} />
+                <span className="hidden 2xl:inline">{link.label}</span>
               </Link>
             );
           })}
@@ -253,6 +257,22 @@ export function Navbar() {
           </Button>
         </div>
       </div>
+
+      <style jsx>{`
+        .nav-scroll::-webkit-scrollbar {
+          height: 4px;
+        }
+        .nav-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .nav-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(34, 211, 238, 0.35);
+          border-radius: 9999px;
+        }
+        .nav-scroll::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(34, 211, 238, 0.55);
+        }
+      `}</style>
 
       {/* Mobile menu */}
       {mobileMenuOpen && (

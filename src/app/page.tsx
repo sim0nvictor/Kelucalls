@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Radio, Sparkles, TrendingUp } from "lucide-react";
 
 import { TokenAvatar } from "@/components/token-avatar";
+import { SearchBox } from "@/components/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +44,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <section className="rounded-[2rem] border border-white/10 bg-slate-950/75 px-6 py-10 shadow-[0_0_120px_rgba(8,145,178,0.12)] sm:px-8">
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
+            <div className="md:hidden">
+              <SearchBox mobile />
+            </div>
             <Badge>Performance-first intelligence</Badge>
             <div className="space-y-4">
               <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">

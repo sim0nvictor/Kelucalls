@@ -24,45 +24,38 @@ export function AdBannerUploader() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file: File) {
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("File too large — max 5 MB.");
-      return;
-    }
-
-    setPreview(URL.createObjectURL(file));
-    setUploading(true);
-    setUploadError(null);
-
-    const fd = new FormData();
-    fd.append("bannerFile", file);
-
-     const result = await uploadAdBannerAction(fd); // server action, not fetch()
-      if (result.error) {
-      setUploadError(result.error);
-      }
-
-    try {
-      const res    = await fetch("/api/admin/upload-banner", { method: "POST", body: fd });
-      const result = await res.json() as { publicUrl?: string; storagePath?: string; error?: string };
-
-      if (result.error) {
-        setUploadError(result.error);
-        setPreview(null);
-        setImageUrl("");
-        setImagePath("");
-      } else {
-        setImageUrl(result.publicUrl  ?? "");
-        setImagePath(result.storagePath ?? "");
-      }
-    } catch {
-      setUploadError("Upload failed — please try again.");
-      setPreview(null);
-    } finally {
-      setUploading(false);
-    }
+async function handleFile(file: File) {
+  if (file.size > 5 * 1024 * 1024) {
+    setUploadError("File too large — max 5 MB.");
+    return;
   }
 
+  setPreview(URL.createObjectURL(file));
+  setUploading(true);
+  setUploadError(null);
+
+  const fd = new FormData();
+  fd.append("bannerFile", file);
+
+  try {
+    const result = await uploadAdBannerAction(fd);
+
+    if (result.error) {
+      setUploadError(result.error);
+      setPreview(null);
+      setImageUrl("");
+      setImagePath("");
+    } else {
+      setImageUrl(result.publicUrl ?? "");
+      setImagePath(result.storagePath ?? "");
+    }
+  } catch {
+    setUploadError("Upload failed — please try again.");
+    setPreview(null);
+  } finally {
+    setUploading(false);
+  }
+}
   function handleRemove() {
     setPreview(null);
     setImageUrl("");

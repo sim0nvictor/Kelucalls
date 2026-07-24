@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "raw.githubusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "canva.link",
+      },
+      {
+        protocol: "https",
+        hostname: "*.canva.com",
+      },
     ],
   },
 };
