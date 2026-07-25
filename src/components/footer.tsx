@@ -12,7 +12,7 @@ function XIcon(props: React.SVGProps<SVGSVGElement>) {
 
 const contactLinks = [
   {
-    label: "X",
+    label: "Twitter",
     href: siteConfig.social.x,
     icon: XIcon,
   },
@@ -193,7 +193,7 @@ export function Footer() {
               rel="noopener noreferrer"
               className="text-blue-400 transition-colors hover:text-blue-300"
             >
-              SevMeta
+              Sevmeta
             </a>
           </span>
 
