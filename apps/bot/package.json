@@ -21,5 +21,8 @@
     "@types/node": "^25.6.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
