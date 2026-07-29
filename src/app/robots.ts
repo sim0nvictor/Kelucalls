@@ -3,7 +3,7 @@ import { siteConfig } from "@/config/site";
 
 /**
  * Place this file at: src/app/robots.ts
- * Next.js auto-serves it at https://kelucalls.com/robots.txt
+ * Next.js auto-serves it at `${siteConfig.url}/robots.txt`
  */
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/kx-admin", "/kx-admin/*", "/api/"],
       },
     ],
-    sitemap: `${siteConfig.url}/sitemap.xml`,
+    sitemap: siteConfig.sitemap,
     host: siteConfig.url,
   };
 }

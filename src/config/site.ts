@@ -8,12 +8,27 @@ export const siteConfig = {
   name: "Kelucalls",
   shortName: "Kelucalls",
 
+  organization: {
+  legalName: "Kelucalls",
+  logo: "https://kelucalls.com/logo.png",
+  foundingDate: "2026",
+},
+
+images: {
+  logo: "https://kelucalls.com/logo.png",
+  og: "https://kelucalls.com/og-image.png",
+  favicon: "https://kelucalls.com/favicon.ico",
+},
+
   // SEO
   description:
     "Kelucalls is a crypto intelligence platform that tracks Telegram call channels, trending tokens, market signals, and crypto insights.",
 
   // Website
   url: "https://kelucalls.com",
+  get sitemap() {
+    return `${this.url}/sitemap.xml`;
+  },
 
   // Contact Emails
   email: {
