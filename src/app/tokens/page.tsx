@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { Activity, Search, Filter, TrendingUp, BarChart2, Wallet, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +64,7 @@ export default async function TokensPage({
       </div>
 
       {selectedToken ? (
-        // ── Single token detail view ────────────────────────────────────────
+        // ── Single token detail view ───────────────────────────────────
         <div className="space-y-6">
           <Card className="border-white/8 bg-slate-950/70">
             <CardContent className="p-6">
@@ -114,10 +113,16 @@ export default async function TokensPage({
           <Card className="border-white/8 bg-slate-950/70">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-white">Price History</h3>
-              <p className="text-sm text-slate-500">Simulated chart — live price data from DexScreener</p>
-              <Suspense fallback={<div className="mt-6 h-64 animate-pulse rounded-2xl bg-white/5" />}>
-                <div className="mt-6"><TokenPriceChart /></div>
-              </Suspense>
+              <p className="text-sm text-slate-500">
+                Live OHLCV market data from the token&apos;s deepest liquidity pool
+              </p>
+              <div className="mt-6">
+                <TokenPriceChart
+                  chain={selectedToken.chain}
+                  contractAddress={selectedToken.contractAddress}
+                  symbol={selectedToken.symbol}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -128,7 +133,7 @@ export default async function TokensPage({
           </div>
         </div>
       ) : (
-        // ── Token list view ─────────────────────────────────────────────────
+        // ── Token list view ──────────────────────────────────────────
         <>
           <div className="grid gap-6 lg:grid-cols-4">
             {[
