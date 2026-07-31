@@ -58,12 +58,15 @@
     "eslint-config-next": "^15.5.15",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.5.0",
-    "init": "^0.1.2",
-    "npm": "^11.13.0",
+    
     "postcss": "^8.5.12",
     "tailwindcss": "^4.2.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.1"
-  }
+  },
+  "engines": {
+  "node": "22.x",
+  "npm": "11.x"
+}
 }
