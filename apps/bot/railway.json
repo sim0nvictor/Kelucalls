@@ -5,7 +5,7 @@
     "buildCommand": "npm run bot:build"
   },
   "deploy": {
-    "startCommand": "npm run start",
+    "startCommand": "npm run bot:start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   },
