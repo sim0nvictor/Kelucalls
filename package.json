@@ -23,6 +23,7 @@
     "worker:price": "node workers/price-update.js",
     "worker:trending": "node workers/trending-aggregate.js",
     "worker:all": "node workers/price-update.js & node workers/trending-aggregate.js",
+    "worker:avatars": "node scripts/channel-avatar-sync.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.mjs"
