@@ -24,6 +24,7 @@
     "worker:trending": "node workers/trending-aggregate.js",
     "worker:all": "node workers/price-update.js & node workers/trending-aggregate.js",
     "worker:avatars": "node scripts/channel-avatar-sync.js",
+    "worker:logos": "node workers/token-logo-backfill.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.mjs"
