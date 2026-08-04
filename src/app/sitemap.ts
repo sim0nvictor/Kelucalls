@@ -8,24 +8,55 @@ import siteConfig from "@/config/site";
  * Next.js auto-serves this at `${siteConfig.url}/sitemap.xml` because this
  * file lives at src/app/sitemap.ts (App Router convention).
  *
- * Combines:
- *  1. Static top-level marketing/legal routes
- *  2. One entry per active/paused channel   -> /channels/[slug]
- *  3. One entry per active token             -> /tokens/[contractAddress]
- *  4. One entry per published insight article -> /insights/[slug]
- *
- * Admin, auth, dashboard, and API routes are intentionally excluded here
- * and disallowed in robots.ts so they're never discovered or indexed.
- *
- * NOTE: the `insights` fetch below assumes a Supabase table named
- * "insights" with `slug`, `status`, and `updated_at` columns, mirroring
- * the existing `channels`/`tokens` pattern. Confirm/adjust the table and
- * column names against your actual schema before shipping.
+ * RULES FOR EDITING THIS FILE:
+ *  1. Only list URLs that actually render a page. A sitemap full of 404s is
+ *     worse than a small sitemap \u2014 it burns crawl budget and erodes trust.
+ *  2. `changeFrequency` and `priority` are deliberately omitted. Google has
+ *     publicly confirmed it ignores both. `lastModified` is the only hint that
+ *     still carries weight, so it is set from real DB timestamps.
+ *  3. Admin, auth, and API routes are excluded here and disallowed in robots.ts.
  */
 
 const BASE_URL = siteConfig.url;
 
 export const revalidate = 3600; // regenerate at most once an hour
+
+/**
+ * Static routes, each verified to exist as a page under src/app.
+ * Keep this list in sync when adding or deleting a route folder.
+ */
+const STATIC_PATHS: readonly string[] = [
+  "/",
+
+  // Core product surfaces
+  "/channels",
+  "/trending",
+  "/tokens",
+  "/live",
+  "/top-callers",
+  "/track",
+  "/insights",
+
+  // Entity / conversion pages
+  "/about",
+  "/submit",
+  "/contact",
+
+  // Resources \u2014 these existed but were previously missing from the sitemap
+  "/faq",
+  "/help",
+  "/ranking-methodology",
+  "/community-guidelines",
+  "/listing-policy",
+  "/advertiser-policy",
+
+  // Legal
+  "/terms",
+  "/privacy",
+  "/cookies",
+  "/disclaimer",
+  "/dmca",
+];
 
 async function getChannelSlugs() {
   return withSupabase(async (supabase) => {
@@ -57,75 +88,36 @@ async function getTokenAddresses() {
   }, [] as Array<{ contract_address: string | null; updated_at: string | null }>);
 }
 
-// ASSUMPTION: adjust table/column names to match your real schema.
-async function getInsightSlugs() {
-  return withSupabase(async (supabase) => {
-    const { data, error } = await supabase
-      .from("insights")
-      .select("slug, updated_at")
-      .eq("status", "published")
-      .limit(5000);
-
-    if (error) throw error;
-    return (data ?? []) as Array<{ slug: string; updated_at: string | null }>;
-  }, [] as Array<{ slug: string; updated_at: string | null }>);
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [channels, tokens, insights] = await Promise.all([
+  const [channels, tokens] = await Promise.all([
     getChannelSlugs(),
     getTokenAddresses(),
-    getInsightSlugs(),
   ]);
 
-  const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE_URL}/`, changeFrequency: "daily", priority: 1.0 },
-    { url: `${BASE_URL}/trending`, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${BASE_URL}/channels`, changeFrequency: "daily", priority: 0.9 },
-    { url: `${BASE_URL}/insights`, changeFrequency: "daily", priority: 0.8 },
-    { url: `${BASE_URL}/about`, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE_URL}/contact`, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE_URL}/submit`, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE_URL}/privacy`, changeFrequency: "yearly", priority: 0.3 },
-    { url: `${BASE_URL}/terms`, changeFrequency: "yearly", priority: 0.3 },
+  const staticRoutes: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
+    url: `${BASE_URL}${path}`,
+  }));
 
-    // Carried over from the prior sitemap — remove any that no longer exist.
-    { url: `${BASE_URL}/top-callers`, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${BASE_URL}/tokens`, changeFrequency: "hourly", priority: 0.8 },
-    { url: `${BASE_URL}/live`, changeFrequency: "always", priority: 0.7 },
-    { url: `${BASE_URL}/track`, changeFrequency: "weekly", priority: 0.6 },
-  ];
-
+  // Rendered by src/app/channels/[slug]/page.tsx
   const channelRoutes: MetadataRoute.Sitemap = channels
-    .filter((c) => Boolean(c.slug))
-    .map((c) => ({
-      url: `${BASE_URL}/channels/${c.slug}`,
-      lastModified: c.updated_at ?? undefined,
-      changeFrequency: "daily",
-      priority: 0.8,
+    .filter((channel) => Boolean(channel.slug))
+    .map((channel) => ({
+      url: `${BASE_URL}/channels/${channel.slug}`,
+      lastModified: channel.updated_at ?? undefined,
     }));
 
+  // Rendered by src/app/tokens/[address]/page.tsx
   const tokenRoutes: MetadataRoute.Sitemap = tokens
-    .filter((t) => Boolean(t.contract_address))
-    .map((t) => ({
-      url: `${BASE_URL}/tokens/${encodeURIComponent(t.contract_address as string)}`,
-      lastModified: t.updated_at ?? undefined,
-      changeFrequency: "hourly",
-      priority: 0.8,
-    }));
-
-  const insightRoutes: MetadataRoute.Sitemap = insights
-    .filter((i) => Boolean(i.slug))
-    .map((i) => ({
-      url: `${BASE_URL}/insights/${i.slug}`,
-      lastModified: i.updated_at ?? undefined,
-      changeFrequency: "weekly",
-      priority: 0.8,
+    .filter((token) => Boolean(token.contract_address))
+    .map((token) => ({
+      url: `${BASE_URL}/tokens/${encodeURIComponent(token.contract_address as string)}`,
+      lastModified: token.updated_at ?? undefined,
     }));
 
   // De-dupe by URL as a safety net in case any source overlaps.
-  const all = [...staticRoutes, ...channelRoutes, ...tokenRoutes, ...insightRoutes];
+  const all = [...staticRoutes, ...channelRoutes, ...tokenRoutes];
   const seen = new Set<string>();
+
   return all.filter((entry) => {
     if (seen.has(entry.url)) return false;
     seen.add(entry.url);
