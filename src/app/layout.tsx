@@ -4,7 +4,9 @@ import { headers } from "next/headers";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
 import { AdPopup } from "@/components/ad-popup";
+import { JsonLd } from "@/components/json-ld";
 import { getActiveAds } from "@/lib/dashboard-data";
+import { graph, organizationSchema, websiteSchema } from "@/lib/schema";
 import { siteConfig } from "@/config/site";
 
 import "./globals.css";
@@ -71,6 +73,10 @@ export default async function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body className="text-slate-50 antialiased">
+        {/* Site-wide entity graph. Admin surfaces are excluded from indexing. */}
+        {!isAdminSurface && (
+          <JsonLd schema={graph(organizationSchema(), websiteSchema())} />
+        )}
         {isAdminSurface ? (
           children
         ) : (
