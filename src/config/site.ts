@@ -55,6 +55,8 @@ images: {
   },
 } as const;
 
+
+
 /**
  * Returns a mailto URL for a department.
  */
