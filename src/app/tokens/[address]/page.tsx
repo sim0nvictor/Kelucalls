@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ChainIcon, chainLabel } from "@/components/chain-icon";
 import { LiveTokenPrice } from "@/components/tokens/live-token-price";
 import { withSupabase } from "@/lib/supabase";
 import { formatPercent, formatMultiple, toNumber } from "@/lib/metrics";
@@ -159,7 +160,10 @@ export default async function TokenDetailPage({ params }: PageProps) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className={chainColour(token.chain)}>{token.chain}</Badge>
+              <Badge className={chainColour(token.chain)}>
+                <ChainIcon chain={token.chain} size={16} className="mr-1.5" />
+                {chainLabel(token.chain)}
+              </Badge>
               {token.name && (
                 <Badge className="border-white/10 bg-white/5 text-slate-300">{token.name}</Badge>
               )}
@@ -183,6 +187,7 @@ export default async function TokenDetailPage({ params }: PageProps) {
 
           <LiveTokenPrice
             address={token.contractAddress}
+            symbol={token.symbol}
             fallbackPriceUsd={token.lastPriceUsd}
             fallbackMarketCapUsd={token.lastMarketCapUsd}
           />
