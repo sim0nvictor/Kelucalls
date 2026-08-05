@@ -8,6 +8,7 @@ import {
   listArticles,
   listArticleCategories,
   listArticleTags,
+  getArticleById,
   getInsightsStats
 } from "@/lib/admin/data";
 import { AdminPageHeader } from "@/components/admin/page-header";
@@ -29,6 +30,48 @@ type PageProps = {
     new?: string;
   }>;
 };
+
+type ArticleRecord = Record<string, unknown>;
+
+/** Reads a string column, falling back to an empty string for null columns. */
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** Formats a stored timestamp for a datetime-local input in local time. */
+function dateTimeLocalValue(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) return "";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const localMs = parsed.getTime() - parsed.getTimezoneOffset() * 60_000;
+  return new Date(localMs).toISOString().slice(0, 16);
+}
+
+/** Keywords are stored as a text[] but edited as a comma separated string. */
+function keywordsValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((keyword) => String(keyword)).filter(Boolean).join(", ");
+  }
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Pulls the tag ids out of the junction rows returned by getArticleById, which
+ * come back as `tags: [{ tag: { id, name, slug } }]`.
+ */
+function selectedTagIds(article: ArticleRecord | null): string[] {
+  if (!article || !Array.isArray(article.tags)) return [];
+
+  return (article.tags as Array<Record<string, unknown>>)
+    .map((row) => {
+      const tag = Array.isArray(row.tag) ? row.tag[0] : row.tag;
+      if (!tag || typeof tag !== "object") return "";
+      return String((tag as { id?: unknown }).id ?? "");
+    })
+    .filter(Boolean);
+}
 
 async function ArticlesList({ status }: { status?: string }) {
   const { articles } = await listArticles({ status, limit: 50 });
@@ -254,6 +297,17 @@ export default async function AdminInsightsPage({ searchParams }: PageProps) {
   const categories = await listArticleCategories();
   const tags = await listArticleTags();
 
+  // Load the article being edited so the form opens prefilled instead of blank.
+  let editingArticle: ArticleRecord | null = null;
+  if (editingId) {
+    try {
+      editingArticle = await getArticleById(editingId);
+    } catch (error) {
+      console.error("Failed to load article for editing:", error);
+      editingArticle = null;
+    }
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -334,11 +388,18 @@ export default async function AdminInsightsPage({ searchParams }: PageProps) {
         <Card className="border-white/10 bg-slate-950/90">
           <CardContent className="p-6">
             <h2 className="text-xl font-semibold text-white mb-6">Edit Article</h2>
-            <ArticleEditorForm
-              categories={categories}
-              tags={tags}
-              articleId={editingId}
-            />
+            {editingArticle ? (
+              <ArticleEditorForm
+                categories={categories}
+                tags={tags}
+                articleId={editingId}
+                article={editingArticle}
+              />
+            ) : (
+              <p className="text-sm text-rose-200">
+                That article could not be loaded. It may have been deleted.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -404,12 +465,15 @@ export default async function AdminInsightsPage({ searchParams }: PageProps) {
 function ArticleEditorForm({
   categories,
   tags,
-  articleId
+  articleId,
+  article = null
 }: {
   categories: Array<{ id: string; name: string; slug: string }>;
   tags: Array<{ id: string; name: string; slug: string }>;
   articleId?: string;
+  article?: ArticleRecord | null;
 }) {
+  const activeTagIds = selectedTagIds(article);
 
   return (
     <form
@@ -434,6 +498,7 @@ function ArticleEditorForm({
           <input
             name="title"
             required
+            defaultValue={textValue(article?.title)}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
             placeholder="Article title"
           />
@@ -446,6 +511,7 @@ function ArticleEditorForm({
             name="slug"
             required
             pattern="[a-z0-9-]+"
+            defaultValue={textValue(article?.slug)}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
             placeholder="article-slug"
           />
@@ -460,6 +526,7 @@ function ArticleEditorForm({
           name="summary"
           rows={3}
           maxLength={1000}
+          defaultValue={textValue(article?.summary)}
           className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
           placeholder="Brief summary of the article..."
         />
@@ -474,6 +541,7 @@ function ArticleEditorForm({
           name="content"
           required
           rows={15}
+          defaultValue={textValue(article?.content)}
           className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50 font-mono text-sm"
           placeholder="# Write your article here...&#10;&#10;Supports **markdown** formatting."
         />
@@ -483,8 +551,10 @@ function ArticleEditorForm({
         <ImageUrlField
           name="featuredImageUrl"
           label="Article banner (image link)"
+          defaultValue={textValue(article?.featured_image_url)}
           altName="featuredImageAlt"
           altLabel="Banner alt text"
+          altDefaultValue={textValue(article?.featured_image_alt)}
           helperText="Paste a direct image link - no upload needed. Must be a full link starting with https."
         />
         <div className="space-y-2">
@@ -493,7 +563,7 @@ function ArticleEditorForm({
           </label>
           <input
             name="author"
-            defaultValue="Kelucalls Team"
+            defaultValue={textValue(article?.author) || "Kelucalls Team"}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
           />
         </div>
@@ -506,6 +576,7 @@ function ArticleEditorForm({
           </label>
           <select
             name="categoryId"
+            defaultValue={textValue(article?.category_id)}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
           >
             <option value="">Select category</option>
@@ -522,7 +593,7 @@ function ArticleEditorForm({
           </label>
           <select
             name="status"
-            defaultValue="draft"
+            defaultValue={textValue(article?.status) || "draft"}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
           >
             <option value="draft">Draft</option>
@@ -538,7 +609,7 @@ function ArticleEditorForm({
           <input
             name="readingTimeMinutes"
             type="number"
-            defaultValue="5"
+            defaultValue={String(article?.reading_time_minutes ?? 5)}
             min="1"
             max="120"
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
@@ -554,6 +625,7 @@ function ArticleEditorForm({
           <input
             name="publishedAt"
             type="datetime-local"
+            defaultValue={dateTimeLocalValue(article?.published_at)}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
           />
         </div>
@@ -564,6 +636,7 @@ function ArticleEditorForm({
           <input
             name="scheduledAt"
             type="datetime-local"
+            defaultValue={dateTimeLocalValue(article?.scheduled_at)}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
           />
         </div>
@@ -571,9 +644,13 @@ function ArticleEditorForm({
           <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
             Tags
           </label>
+          {/* Marker so the server action can tell an empty selection apart from
+              a form that never included tags. */}
+          <input type="hidden" name="tagsPresent" value="1" />
           <select
             name="tagIds"
             multiple
+            defaultValue={activeTagIds}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50 h-24"
           >
             {tags.map((tag) => (
@@ -582,22 +659,44 @@ function ArticleEditorForm({
               </option>
             ))}
           </select>
+          <p className="text-xs text-slate-600">Hold Ctrl or Cmd to select more than one.</p>
         </div>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4">
         <h3 className="font-medium text-white">Badges</h3>
+        {/* Unchecked boxes are not submitted, so this marker tells the server
+            action that badge state is authoritative. */}
+        <input type="hidden" name="badgesPresent" value="1" />
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" name="isFeatured" value="true" className="rounded" />
+            <input
+              type="checkbox"
+              name="isFeatured"
+              value="true"
+              defaultChecked={Boolean(article?.is_featured)}
+              className="rounded"
+            />
             Featured
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" name="isTrending" value="true" className="rounded" />
+            <input
+              type="checkbox"
+              name="isTrending"
+              value="true"
+              defaultChecked={Boolean(article?.is_trending)}
+              className="rounded"
+            />
             Trending
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" name="isEditorPick" value="true" className="rounded" />
+            <input
+              type="checkbox"
+              name="isEditorPick"
+              value="true"
+              defaultChecked={Boolean(article?.is_editor_pick)}
+              className="rounded"
+            />
             Editor Pick
           </label>
         </div>
@@ -613,6 +712,7 @@ function ArticleEditorForm({
             <input
               name="seoTitle"
               maxLength={70}
+              defaultValue={textValue(article?.seo_title)}
               className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
               placeholder="Custom SEO title"
             />
@@ -623,6 +723,7 @@ function ArticleEditorForm({
             </label>
             <input
               name="keywords"
+              defaultValue={keywordsValue(article?.keywords)}
               className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
               placeholder="keyword1, keyword2, keyword3"
             />
@@ -636,6 +737,7 @@ function ArticleEditorForm({
             name="metaDescription"
             maxLength={160}
             rows={2}
+            defaultValue={textValue(article?.meta_description)}
             className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
             placeholder="SEO meta description"
           />
@@ -643,6 +745,7 @@ function ArticleEditorForm({
         <ImageUrlField
           name="openGraphImageUrl"
           label="Social share image (image link)"
+          defaultValue={textValue(article?.open_graph_image_url)}
           helperText="Shown in link previews on X, Telegram and WhatsApp. Falls back to the banner if left empty."
           aspectRatio="1200/630"
         />

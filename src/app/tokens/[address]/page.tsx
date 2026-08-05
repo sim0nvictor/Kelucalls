@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ChainIcon } from "@/components/chain-icon";
+import { chainLabel } from "@/lib/chains";
+import { DexChart } from "@/components/tokens/dex-chart";
 import { LiveTokenPrice } from "@/components/tokens/live-token-price";
+import { findSnapshot, getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
 import { withSupabase } from "@/lib/supabase";
 import { formatPercent, formatMultiple, toNumber } from "@/lib/metrics";
 
@@ -142,6 +146,12 @@ export default async function TokenDetailPage({ params }: PageProps) {
 
   const { token, stats, calls } = data;
 
+  // Resolve the deepest liquidity pair so the chart points at a real market.
+  const snapshots = await getTokenMarketSnapshotsForTokens([
+    { address: token.contractAddress, symbol: token.symbol },
+  ]);
+  const snapshot = findSnapshot(snapshots, token.contractAddress, token.symbol);
+
   const dexUrl = DEXSCREENER_SEARCH_URL + encodeURIComponent(token.contractAddress);
   const shortAddr = token.contractAddress.slice(0, 6) + "\u2026" + token.contractAddress.slice(-4);
 
@@ -159,7 +169,10 @@ export default async function TokenDetailPage({ params }: PageProps) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className={chainColour(token.chain)}>{token.chain}</Badge>
+              <Badge className={chainColour(token.chain)}>
+                <ChainIcon chain={token.chain} size={16} className="mr-1.5" />
+                {chainLabel(token.chain)}
+              </Badge>
               {token.name && (
                 <Badge className="border-white/10 bg-white/5 text-slate-300">{token.name}</Badge>
               )}
@@ -170,7 +183,7 @@ export default async function TokenDetailPage({ params }: PageProps) {
             <div className="flex items-center gap-3 text-sm text-slate-400">
               <span className="font-mono">{shortAddr}</span>
               <a
-                href={dexUrl}
+                href={snapshot?.pairUrl ?? dexUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1 text-cyan-400 transition-colors hover:text-cyan-300"
@@ -183,11 +196,21 @@ export default async function TokenDetailPage({ params }: PageProps) {
 
           <LiveTokenPrice
             address={token.contractAddress}
+            symbol={token.symbol}
             fallbackPriceUsd={token.lastPriceUsd}
             fallbackMarketCapUsd={token.lastMarketCapUsd}
           />
         </div>
       </section>
+
+      {/* Live chart, straight from DexScreener */}
+      <DexChart
+        pairUrl={snapshot?.pairUrl ?? null}
+        chainId={snapshot?.chainId ?? null}
+        contractAddress={token.contractAddress}
+        symbol={token.symbol}
+        chain={token.chain}
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">

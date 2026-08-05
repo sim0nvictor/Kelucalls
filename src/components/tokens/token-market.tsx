@@ -14,8 +14,15 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { ChainIcon } from "@/components/chain-icon";
 import { TokenAvatar } from "@/components/token-avatar";
-import type { TokenMarketSnapshot } from "@/lib/token-market";
+import {
+  findSnapshot,
+  snapshotKey,
+  symbolKey,
+  type TokenMarketQuery,
+  type TokenMarketSnapshot,
+} from "@/lib/token-market";
 import type { TokenMarketRow } from "@/lib/tokens-data";
 
 type SnapshotMap = Record<string, TokenMarketSnapshot>;
@@ -137,25 +144,34 @@ export function TokenMarket({
   const snapshotsRef = useRef<SnapshotMap>(initialSnapshots);
   const flashTimerRef = useRef<number | null>(null);
 
-  const addresses = useMemo(
+  // Send the symbol alongside the address so tokens with a missing or wrong
+  // contract address still get priced by ticker.
+  const marketQueries = useMemo<TokenMarketQuery[]>(
     () =>
       tokens
-        .map((token) => token.contractAddress)
-        .filter((address): address is string => typeof address === "string" && address.length > 0),
+        .map((token) => ({
+          address: token.contractAddress ?? null,
+          symbol: token.symbol ?? null,
+        }))
+        .filter((entry) => Boolean(entry.address) || Boolean(entry.symbol)),
     [tokens]
   );
-  const addressKey = addresses.join(",");
+
+  const queryKey = useMemo(
+    () => marketQueries.map((entry) => (entry.address ?? "") + "|" + (entry.symbol ?? "")).join(","),
+    [marketQueries]
+  );
 
   const refresh = useCallback(
     async (silent: boolean) => {
-      if (addresses.length === 0) return;
+      if (marketQueries.length === 0) return;
       if (!silent) setIsRefreshing(true);
 
       try {
         const response = await fetch("/api/tokens/live", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ addresses }),
+          body: JSON.stringify({ tokens: marketQueries }),
           cache: "no-store",
         });
 
@@ -193,12 +209,12 @@ export function TokenMarket({
         if (!silent) setIsRefreshing(false);
       }
     },
-    [addresses]
+    [marketQueries]
   );
 
   // Poll for fresh prices, pausing while the tab is in the background.
   useEffect(() => {
-    if (addressKey === "") return;
+    if (queryKey === "") return;
 
     const timer = window.setInterval(() => {
       if (typeof document !== "undefined" && document.hidden) return;
@@ -206,11 +222,11 @@ export function TokenMarket({
     }, refreshMs);
 
     return () => window.clearInterval(timer);
-  }, [addressKey, refresh, refreshMs]);
+  }, [queryKey, refresh, refreshMs]);
 
   // Catch up immediately when the visitor comes back to the tab.
   useEffect(() => {
-    if (addressKey === "") return;
+    if (queryKey === "") return;
 
     const handleVisibility = () => {
       if (!document.hidden) void refresh(true);
@@ -218,7 +234,7 @@ export function TokenMarket({
 
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [addressKey, refresh]);
+  }, [queryKey, refresh]);
 
   useEffect(() => {
     setNow(Date.now());
@@ -236,8 +252,7 @@ export function TokenMarket({
   const rows = useMemo<MarketRow[]>(
     () =>
       tokens.map((token) => {
-        const key = token.contractAddress ? token.contractAddress.toLowerCase() : "";
-        const snapshot = key === "" ? undefined : snapshots[key];
+        const snapshot = findSnapshot(snapshots, token.contractAddress, token.symbol);
 
         return {
           ...token,
@@ -503,8 +518,8 @@ export function TokenMarket({
               </thead>
               <tbody>
                 {visibleRows.map((row) => {
-                  const key = row.contractAddress ? row.contractAddress.toLowerCase() : "";
-                  const pulse = key === "" ? undefined : flash[key];
+                  const pulse =
+                    flash[snapshotKey(row.contractAddress)] ?? flash[symbolKey(row.symbol)];
 
                   return (
                     <tr
@@ -526,9 +541,7 @@ export function TokenMarket({
                         </Link>
                       </td>
                       <td className="py-4">
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-slate-300">
-                          {row.chain}
-                        </span>
+                        <ChainIcon chain={row.chain} size={20} showLabel />
                       </td>
                       <td
                         className={
@@ -615,8 +628,9 @@ function MoverPanel({ title, icon: Icon, accent, rows, emptyLabel }: MoverPanelP
                   <TokenAvatar src={row.logoUrl} symbol={row.symbol} size={28} />
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-white">{row.symbol}</span>
-                    <span className="block truncate text-xs text-slate-500">
-                      {row.name ?? row.chain}
+                    <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <ChainIcon chain={row.chain} size={14} />
+                      <span className="truncate">{row.name ?? row.chain}</span>
                     </span>
                   </span>
                 </span>

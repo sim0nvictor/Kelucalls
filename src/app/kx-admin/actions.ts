@@ -9,6 +9,8 @@ import { ADMIN_BASE_PATH, ADMIN_SIGN_IN_PATH } from "@/lib/admin/constants";
 import { createAdminDb } from "@/lib/admin/data";
 import { checkRateLimit } from "@/lib/admin/rate-limit";
 
+const TELEGRAM_BASE_URL = "https://t.me/";
+
 const signInSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(8),
@@ -332,7 +334,7 @@ export async function approveSubmissionAction(formData: FormData) {
 
   const handle = normalizeTelegramHandle(String(submission.telegram_handle));
   const slug = await getAvailableSlug(handle || String(submission.channel_name));
-  const telegramUrl = submission.telegram_url || `https://t.me/${handle}`;
+  const telegramUrl = submission.telegram_url || TELEGRAM_BASE_URL + handle;
 
   const { data: channel, error: channelError } = await db
     .from("channels")
@@ -726,6 +728,46 @@ const articleSchema = z.object({
   tagIds: z.array(z.string().uuid()).default([])
 });
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Reads the selected tag ids from the article form.
+ *
+ * The editor renders a multi-select, so the browser submits one `tagIds`
+ * entry per selected tag. Reading only the first entry and running it through
+ * JSON.parse threw on every save and silently dropped every tag, so read all
+ * entries here. A single JSON array string is still accepted for callers that
+ * post one.
+ */
+function readTagIds(formData: FormData): string[] {
+  const entries = formData.getAll("tagIds").map((entry) => String(entry)).filter(Boolean);
+
+  if (entries.length === 1 && entries[0].trim().startsWith("[")) {
+    try {
+      const parsed: unknown = JSON.parse(entries[0]);
+      if (Array.isArray(parsed)) {
+        return parsed.map((value) => String(value)).filter((value) => UUID_PATTERN.test(value));
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  }
+
+  return entries.filter((value) => UUID_PATTERN.test(value));
+}
+
+/**
+ * Returns the submitted value for a field, or undefined when the field was not
+ * part of the submission at all. Update requests must only patch the fields
+ * the form actually posted - sending "" for everything wiped valid content and
+ * failed validation on required fields.
+ */
+function submittedField(formData: FormData, key: string): string | undefined {
+  if (!formData.has(key)) return undefined;
+  return String(formData.get(key) ?? "");
+}
+
 function slugifyArticle(value: string) {
   return value
     .toLowerCase()
@@ -751,13 +793,7 @@ async function getAvailableArticleSlug(base: string) {
 export async function createArticleAction(formData: FormData) {
   await requireAdminIdentity();
 
-  const tagIdsStr = String(formData.get("tagIds") || "[]");
-  let tagIds: string[] = [];
-  try {
-    tagIds = JSON.parse(tagIdsStr);
-  } catch {
-    tagIds = [];
-  }
+  const tagIds = readTagIds(formData);
 
   const parsed = articleSchema.safeParse({
     title: String(formData.get("title") || ""),
@@ -850,41 +886,55 @@ export async function updateArticleAction(formData: FormData) {
   const articleId = String(formData.get("articleId") || "");
   if (!articleId) redirect(`${ADMIN_BASE_PATH}/insights?error=invalid`);
 
-  const tagIdsStr = String(formData.get("tagIds") || "[]");
-  let tagIds: string[] = [];
-  try {
-    tagIds = JSON.parse(tagIdsStr);
-  } catch {
-    tagIds = [];
+  const tagIds = readTagIds(formData);
+  // The editor posts this marker so we can tell "no tags selected" apart from
+  // "tags were not part of this form".
+  const tagsSubmitted = formData.has("tagsPresent");
+  // Unchecked checkboxes are absent from FormData, so badge state can only be
+  // read when the form tells us the badge block was rendered.
+  const badgesSubmitted = formData.has("badgesPresent");
+
+  const candidate: Record<string, unknown> = {
+    title: submittedField(formData, "title"),
+    slug: submittedField(formData, "slug"),
+    summary: submittedField(formData, "summary"),
+    content: submittedField(formData, "content"),
+    featuredImageUrl: submittedField(formData, "featuredImageUrl"),
+    featuredImageAlt: submittedField(formData, "featuredImageAlt"),
+    author: submittedField(formData, "author"),
+    authorAvatarUrl: submittedField(formData, "authorAvatarUrl"),
+    categoryId: submittedField(formData, "categoryId"),
+    status: submittedField(formData, "status"),
+    publishedAt: submittedField(formData, "publishedAt"),
+    scheduledAt: submittedField(formData, "scheduledAt"),
+    readingTimeMinutes: submittedField(formData, "readingTimeMinutes"),
+    seoTitle: submittedField(formData, "seoTitle"),
+    metaDescription: submittedField(formData, "metaDescription"),
+    canonicalUrl: submittedField(formData, "canonicalUrl"),
+    keywords: submittedField(formData, "keywords"),
+    openGraphImageUrl: submittedField(formData, "openGraphImageUrl"),
+    twitterCard: submittedField(formData, "twitterCard"),
+    linkedTokenId: submittedField(formData, "linkedTokenId"),
+    linkedChannelId: submittedField(formData, "linkedChannelId")
+  };
+
+  if (badgesSubmitted) {
+    candidate.isFeatured = formData.has("isFeatured");
+    candidate.isTrending = formData.has("isTrending");
+    candidate.isEditorPick = formData.has("isEditorPick");
   }
 
-  const parsed = articleSchema.partial().safeParse({
-    title: String(formData.get("title") || ""),
-    slug: String(formData.get("slug") || ""),
-    summary: String(formData.get("summary") || ""),
-    content: String(formData.get("content") || ""),
-    featuredImageUrl: String(formData.get("featuredImageUrl") || ""),
-    featuredImageAlt: String(formData.get("featuredImageAlt") || ""),
-    author: String(formData.get("author") || ""),
-    authorAvatarUrl: String(formData.get("authorAvatarUrl") || ""),
-    categoryId: String(formData.get("categoryId") || ""),
-    status: String(formData.get("status") || ""),
-    publishedAt: String(formData.get("publishedAt") || ""),
-    scheduledAt: String(formData.get("scheduledAt") || ""),
-    isFeatured: String(formData.get("isFeatured") || ""),
-    isTrending: String(formData.get("isTrending") || ""),
-    isEditorPick: String(formData.get("isEditorPick") || ""),
-    readingTimeMinutes: String(formData.get("readingTimeMinutes") || ""),
-    seoTitle: String(formData.get("seoTitle") || ""),
-    metaDescription: String(formData.get("metaDescription") || ""),
-    canonicalUrl: String(formData.get("canonicalUrl") || ""),
-    keywords: String(formData.get("keywords") || ""),
-    openGraphImageUrl: String(formData.get("openGraphImageUrl") || ""),
-    twitterCard: String(formData.get("twitterCard") || ""),
-    linkedTokenId: String(formData.get("linkedTokenId") || ""),
-    linkedChannelId: String(formData.get("linkedChannelId") || ""),
-    tagIds
-  });
+  if (tagsSubmitted) {
+    candidate.tagIds = tagIds;
+  }
+
+  // Drop every field the form did not post so a partial submission cannot
+  // blank out stored content.
+  const input = Object.fromEntries(
+    Object.entries(candidate).filter(([, value]) => value !== undefined)
+  );
+
+  const parsed = articleSchema.partial().safeParse(input);
 
   if (!parsed.success) {
     console.error("Article update validation error:", parsed.error.flatten());
@@ -896,7 +946,7 @@ export async function updateArticleAction(formData: FormData) {
 
   if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
   if (parsed.data.slug !== undefined) updateData.slug = parsed.data.slug;
-  if (parsed.data.summary !== undefined) updateData.summary = parsed.data.summary;
+  if (parsed.data.summary !== undefined) updateData.summary = parsed.data.summary || null;
   if (parsed.data.content !== undefined) updateData.content = parsed.data.content;
   if (parsed.data.featuredImageUrl !== undefined) updateData.featured_image_url = parsed.data.featuredImageUrl || null;
   if (parsed.data.featuredImageAlt !== undefined) updateData.featured_image_alt = parsed.data.featuredImageAlt || null;
@@ -919,15 +969,17 @@ export async function updateArticleAction(formData: FormData) {
   if (parsed.data.linkedTokenId !== undefined) updateData.linked_token_id = parsed.data.linkedTokenId || null;
   if (parsed.data.linkedChannelId !== undefined) updateData.linked_channel_id = parsed.data.linkedChannelId || null;
 
-  const { error } = await db.from("articles").update(updateData).eq("id", articleId);
+  if (Object.keys(updateData).length > 0) {
+    const { error } = await db.from("articles").update(updateData).eq("id", articleId);
 
-  if (error) {
-    console.error("Article update error:", error);
-    throw error;
+    if (error) {
+      console.error("Article update error:", error);
+      throw error;
+    }
   }
 
-  // Update tags if provided
-  if (tagIds.length > 0 || formData.get("tagIds")) {
+  // Replace the tag set only when the editor actually submitted tags.
+  if (tagsSubmitted) {
     await db.from("article_tags_junction").delete().eq("article_id", articleId);
     if (tagIds.length > 0) {
       const tagJunctions = tagIds.map((tagId) => ({
