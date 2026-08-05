@@ -8,13 +8,38 @@ import {
   ADMIN_SIGN_IN_PATH
 } from "@/lib/admin/constants";
 
+/**
+ * Site-wide Content-Security-Policy.
+ *
+ * Kept as a list so each directive can be reasoned about on its own. Note that
+ * any directive omitted here silently falls back to default-src ('self'), which
+ * is what previously blocked the token price chart.
+ */
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: https: blob:",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "connect-src 'self' https: wss:",
+  // Token pages embed the live DexScreener chart. Without an explicit frame-src
+  // this inherits default-src ('self') and the chart renders as a blank
+  // "content is blocked" frame.
+  "frame-src 'self' https://dexscreener.com https://*.dexscreener.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  // Governs who may embed Kelucalls, not what Kelucalls embeds. Stays locked.
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests"
+].join("; ");
+
 function applySecurityHeaders(response: NextResponse) {
-  response.headers.set(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
-  );
+  response.headers.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Like frame-ancestors, this restricts others embedding us, not our own
+  // iframes, so it can stay at DENY.
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
 }
