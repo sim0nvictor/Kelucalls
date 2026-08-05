@@ -1,13 +1,15 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Clock, Eye, Calendar, Share2, ArrowLeft, ArrowRight, Tag, TrendingUp } from "lucide-react";
+import { Clock, Eye, Calendar, ArrowLeft, ArrowRight, Tag, TrendingUp } from "lucide-react";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ArticleBanner } from "@/components/insights/article-banner";
+import { ArticleShare } from "@/components/insights/article-share";
+import { siteConfig } from "@/config/site";
 import { formatNumber } from "@/lib/metrics";
 
 function SectionHeader({ title, icon: Icon, color }: { title: string; icon?: typeof ArrowRight; color?: string }) {
@@ -26,6 +28,11 @@ function SectionHeader({ title, icon: Icon, color }: { title: string; icon?: typ
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
+
+/** Canonical/share URL for an article. */
+function articleUrl(slug: string) {
+  return `${siteConfig.url}/insights/${slug}`;
+}
 
 async function getArticle(slug: string) {
   const db = getSupabaseServer();
@@ -166,23 +173,32 @@ export async function generateMetadata({ params }: PageProps) {
 
   const seoTitle = article.seo_title || article.title;
   const metaDesc = article.meta_description || article.summary || `Read ${article.title} on Kelucalls Insights.`;
+  // Prefer the dedicated social image, otherwise fall back to the banner link.
+  const shareImage = article.open_graph_image_url || article.featured_image_url;
+  const shareImages = shareImage ? [String(shareImage)] : [];
+  const canonicalUrl = article.canonical_url ? String(article.canonical_url) : articleUrl(slug);
 
   return {
     title: `${seoTitle} | Kelucalls Insights`,
     description: metaDesc,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title: seoTitle,
       description: metaDesc,
       type: "article",
+      url: canonicalUrl,
+      siteName: siteConfig.name,
       publishedTime: article.published_at,
       authors: [String(article.author)],
-      images: article.open_graph_image_url ? [String(article.open_graph_image_url)] : [],
+      images: shareImages,
     },
     twitter: {
       card: article.twitter_card || "summary_large_image",
       title: seoTitle,
       description: metaDesc,
-      images: article.open_graph_image_url ? [String(article.open_graph_image_url)] : [],
+      images: shareImages,
     },
   };
 }
@@ -308,13 +324,13 @@ export default async function ArticlePage({ params }: PageProps) {
               <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-slate-500">
                 <div className="flex items-center gap-2">
                   {article.author_avatar_url ? (
-                    <Image
-                      src={String(article.author_avatar_url)}
-                      alt={String(article.author)}
-                      width={32}
-                      height={32}
-                      className="rounded-full"
-                    />
+                    <div className="size-8 overflow-hidden rounded-full">
+                      <ArticleBanner
+                        src={String(article.author_avatar_url)}
+                        alt={String(article.author)}
+                        iconClassName="size-4"
+                      />
+                    </div>
                   ) : (
                     <div className="size-8 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400" />
                   )}
@@ -339,14 +355,13 @@ export default async function ArticlePage({ params }: PageProps) {
               </div>
             </header>
 
-            {/* Featured Image */}
+            {/* Featured Image (rendered from an image link, no upload required) */}
             {article.featured_image_url && (
               <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-3xl">
-                <Image
+                <ArticleBanner
                   src={String(article.featured_image_url)}
                   alt={String(article.featured_image_alt || article.title)}
-                  fill
-                  className="object-cover"
+                  iconClassName="size-16"
                   priority
                 />
               </div>
@@ -375,13 +390,11 @@ export default async function ArticlePage({ params }: PageProps) {
             />
 
             {/* Share */}
-            <div className="mt-12 flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-              <span className="text-sm font-medium text-white">Share:</span>
-              <Button variant="ghost" size="sm">
-                <Share2 className="size-4 mr-2" />
-                Copy Link
-              </Button>
-            </div>
+            <ArticleShare
+              title={String(article.title)}
+              url={articleUrl(slug)}
+              summary={article.summary ? String(article.summary) : null}
+            />
           </article>
 
           {/* Sidebar */}

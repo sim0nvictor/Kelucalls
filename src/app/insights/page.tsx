@@ -1,11 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
-import { notFound } from "next/navigation";
 import { Clock, Eye, ArrowRight, TrendingUp, Star, BookOpen, Calendar } from "lucide-react";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ArticleBanner } from "@/components/insights/article-banner";
 import { formatNumber } from "@/lib/metrics";
 
 type ArticleWithRelations = {
@@ -160,19 +159,13 @@ function ArticleCard({
       <Link href={`/insights/${article.slug}`} className="group block">
         <Card className="overflow-hidden border-white/10 bg-white/5 transition-all duration-300 hover:border-cyan-400/30 hover:shadow-[0_0_40px_rgba(34,211,238,0.1)]">
           <div className="grid gap-0 lg:grid-cols-2">
-            <div className="relative aspect-[16/9] lg:aspect-auto lg:min-h-[400px]">
-              {article.featured_image_url ? (
-                <Image
-                  src={String(article.featured_image_url)}
-                  alt={String(article.featured_image_alt || article.title)}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center bg-gradient-to-br from-cyan-500/20 to-emerald-500/20">
-                  <BookOpen className="size-16 text-slate-600" />
-                </div>
-              )}
+            <div className="relative aspect-[16/9] overflow-hidden lg:aspect-auto lg:min-h-[400px]">
+              <ArticleBanner
+                src={article.featured_image_url}
+                alt={article.featured_image_alt || article.title}
+                className="transition-transform duration-500 group-hover:scale-105"
+                iconClassName="size-16"
+              />
               {category && (
                 <Badge
                   className="absolute left-4 top-4 border-0"
@@ -220,19 +213,12 @@ function ArticleCard({
   return (
     <Link href={`/insights/${article.slug}`} className="group block">
       <Card className="overflow-hidden border-white/10 bg-white/5 transition-all duration-300 hover:border-cyan-400/30 hover:shadow-[0_0_30px_rgba(34,211,238,0.1)] h-full">
-        <div className="relative aspect-[16/10]">
-          {article.featured_image_url ? (
-            <Image
-              src={String(article.featured_image_url)}
-              alt={String(article.featured_image_alt || article.title)}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-cyan-500/10 to-emerald-500/10">
-              <BookOpen className="size-12 text-slate-600" />
-            </div>
-          )}
+        <div className="relative aspect-[16/10] overflow-hidden">
+          <ArticleBanner
+            src={article.featured_image_url}
+            alt={article.featured_image_alt || article.title}
+            className="transition-transform duration-500 group-hover:scale-105"
+          />
           {category && (
             <Badge
               className="absolute left-3 top-3 border-0 text-xs"
