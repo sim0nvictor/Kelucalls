@@ -13,6 +13,7 @@ import {
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { AdminStatusPill } from "@/components/admin/status-pill";
 import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
+import { ImageUrlField } from "@/components/admin/image-url-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -479,16 +480,13 @@ function ArticleEditorForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
-            Featured Image URL
-          </label>
-          <input
-            name="featuredImageUrl"
-            className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
-            placeholder="https://..."
-          />
-        </div>
+        <ImageUrlField
+          name="featuredImageUrl"
+          label="Article banner (image link)"
+          altName="featuredImageAlt"
+          altLabel="Banner alt text"
+          helperText="Paste a direct image link - no upload needed. Must be a full link starting with https."
+        />
         <div className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
             Author
@@ -642,6 +640,12 @@ function ArticleEditorForm({
             placeholder="SEO meta description"
           />
         </div>
+        <ImageUrlField
+          name="openGraphImageUrl"
+          label="Social share image (image link)"
+          helperText="Shown in link previews on X, Telegram and WhatsApp. Falls back to the banner if left empty."
+          aspectRatio="1200/630"
+        />
       </div>
 
       <div className="flex gap-3">
