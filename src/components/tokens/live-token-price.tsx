@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
-import type { TokenMarketSnapshot } from "@/lib/token-market";
+import { findSnapshot, type TokenMarketSnapshot } from "@/lib/token-market";
 
 type LiveTokenPriceProps = {
   address: string | null;
+  /** Used to price the token when the contract address resolves to nothing. */
+  symbol?: string | null;
   fallbackPriceUsd: number | null;
   fallbackMarketCapUsd: number | null;
   refreshMs?: number;
@@ -49,6 +51,7 @@ function changeTone(value: number | null) {
 
 export function LiveTokenPrice({
   address,
+  symbol = null,
   fallbackPriceUsd,
   fallbackMarketCapUsd,
   refreshMs = 20_000,
@@ -60,18 +63,21 @@ export function LiveTokenPrice({
   const [pulse, setPulse] = useState<"up" | "down" | null>(null);
 
   const load = useCallback(async () => {
-    if (!address) return;
+    if (!address && !symbol) return;
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        "/api/tokens/live?addresses=" + encodeURIComponent(address),
-        { cache: "no-store" }
-      );
+      const params = new URLSearchParams();
+      if (address) params.set("addresses", address);
+      if (symbol) params.set("symbols", symbol);
+
+      const response = await fetch("/api/tokens/live?" + params.toString(), {
+        cache: "no-store",
+      });
       if (!response.ok) throw new Error("Live price request failed");
 
       const payload = (await response.json()) as { tokens?: Record<string, TokenMarketSnapshot> };
-      const next = payload.tokens?.[address.toLowerCase()] ?? null;
+      const next = findSnapshot(payload.tokens ?? {}, address, symbol);
       if (!next) return;
 
       const before = previousPriceRef.current;
@@ -88,10 +94,10 @@ export function LiveTokenPrice({
     } finally {
       setIsLoading(false);
     }
-  }, [address]);
+  }, [address, symbol]);
 
   useEffect(() => {
-    if (!address) return;
+    if (!address && !symbol) return;
 
     void load();
     const timer = window.setInterval(() => {
@@ -100,7 +106,7 @@ export function LiveTokenPrice({
     }, refreshMs);
 
     return () => window.clearInterval(timer);
-  }, [address, load, refreshMs]);
+  }, [address, symbol, load, refreshMs]);
 
   useEffect(() => {
     setNow(Date.now());

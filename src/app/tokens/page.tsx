@@ -3,7 +3,7 @@ import { Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TokenMarket } from "@/components/tokens/token-market";
 import { siteConfig } from "@/config/site";
-import { getTokenMarketSnapshots } from "@/lib/token-market";
+import { getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
 import { getTokenMarketRows } from "@/lib/tokens-data";
 
 export const revalidate = 0;
@@ -25,10 +25,14 @@ export default async function TokensPage({
   const tokens = await getTokenMarketRows(200);
 
   // Seed the first paint with live values so prices are never blank on load.
-  const addresses = tokens
-    .map((token) => token.contractAddress)
-    .filter((address): address is string => typeof address === "string" && address.length > 0);
-  const initialSnapshots = await getTokenMarketSnapshots(addresses);
+  // Symbols are sent too, so tokens with a missing contract address (JIMOTHY
+  // and friends) still resolve via DexScreener search.
+  const initialSnapshots = await getTokenMarketSnapshotsForTokens(
+    tokens.map((token) => ({
+      address: token.contractAddress,
+      symbol: token.symbol,
+    }))
+  );
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
