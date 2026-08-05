@@ -4,8 +4,14 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { LiveTokenPrice } from "@/components/tokens/live-token-price";
 import { withSupabase } from "@/lib/supabase";
-import { formatPercent, formatMultiple, formatCompactCurrency, toNumber } from "@/lib/metrics";
+import { formatPercent, formatMultiple, toNumber } from "@/lib/metrics";
+
+const DEXSCREENER_SEARCH_URL = "https://dexscreener.com/search?q=";
+
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ address: string }>;
@@ -13,7 +19,7 @@ type PageProps = {
 
 async function getTokenData(address: string) {
   return withSupabase(async (supabase) => {
-    // ── Token row ────────────────────────────────────────────────────────────
+    // ── Token row ──────────────────────────────────────────────────────
     const { data: token, error: tokenErr } = await supabase
       .from("tokens")
       .select("id, symbol, name, chain, contract_address, last_price_usd, last_market_cap_usd")
@@ -23,7 +29,7 @@ async function getTokenData(address: string) {
     if (tokenErr) throw tokenErr;
     if (!token) return null;
 
-    // ── All calls for this token ─────────────────────────────────────────────
+    // ── All calls for this token ────────────────────────────────────────
     const { data: calls, error: callsErr } = await supabase
       .from("calls")
       .select(`
@@ -53,7 +59,7 @@ async function getTokenData(address: string) {
 
     if (callsErr) throw callsErr;
 
-    // ── Aggregate stats ──────────────────────────────────────────────────────
+    // ── Aggregate stats ───────────────────────────────────────────────
     const callList = calls ?? [];
     const withMetrics = callList.filter((c) => c.call_metrics?.length);
     const totalCalls = callList.length;
@@ -115,7 +121,7 @@ async function getTokenData(address: string) {
   }, null);
 }
 
-// ── Chain badge colour ─────────────────────────────────────────────────────
+// ── Chain badge colour ─────────────────────────────────────────────
 function chainColour(chain: string) {
   const map: Record<string, string> = {
     solana:   "border-purple-400/25 bg-purple-400/10 text-purple-200",
@@ -136,8 +142,8 @@ export default async function TokenDetailPage({ params }: PageProps) {
 
   const { token, stats, calls } = data;
 
-  const dexUrl = `https://dexscreener.com/search?q=${encodeURIComponent(token.contractAddress)}`;
-  const shortAddr = `${token.contractAddress.slice(0, 6)}…${token.contractAddress.slice(-4)}`;
+  const dexUrl = DEXSCREENER_SEARCH_URL + encodeURIComponent(token.contractAddress);
+  const shortAddr = token.contractAddress.slice(0, 6) + "\u2026" + token.contractAddress.slice(-4);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
@@ -163,38 +169,23 @@ export default async function TokenDetailPage({ params }: PageProps) {
             </h1>
             <div className="flex items-center gap-3 text-sm text-slate-400">
               <span className="font-mono">{shortAddr}</span>
-              <button
-                onClick={undefined}
-                className="group flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+              <a
+                href={dexUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 text-cyan-400 transition-colors hover:text-cyan-300"
               >
-                <a
-                  href={dexUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1"
-                >
-                  View on DexScreener
-                  <ExternalLink className="size-3.5" />
-                </a>
-              </button>
+                View on DexScreener
+                <ExternalLink className="size-3.5" />
+              </a>
             </div>
           </div>
 
-          {token.lastPriceUsd && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-right">
-              <div className="text-xs uppercase tracking-widest text-slate-500">Last price</div>
-              <div className="mt-1 text-3xl font-semibold text-white">
-                ${token.lastPriceUsd < 0.0001
-                  ? token.lastPriceUsd.toExponential(2)
-                  : token.lastPriceUsd.toPrecision(4)}
-              </div>
-              {token.lastMarketCapUsd && (
-                <div className="mt-1 text-sm text-slate-400">
-                  MCap {formatCompactCurrency(token.lastMarketCapUsd)}
-                </div>
-              )}
-            </div>
-          )}
+          <LiveTokenPrice
+            address={token.contractAddress}
+            fallbackPriceUsd={token.lastPriceUsd}
+            fallbackMarketCapUsd={token.lastMarketCapUsd}
+          />
         </div>
       </section>
 
@@ -238,7 +229,7 @@ export default async function TokenDetailPage({ params }: PageProps) {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/channel/${call.channelSlug}`}
+                        href={"/channel/" + call.channelSlug}
                         className="text-sm font-medium text-cyan-300 hover:text-cyan-200 transition-colors"
                       >
                         {call.channelTitle}
@@ -265,14 +256,14 @@ export default async function TokenDetailPage({ params }: PageProps) {
                         ? call.entryPriceUsd < 0.0001
                           ? call.entryPriceUsd.toExponential(2)
                           : call.entryPriceUsd.toPrecision(4)
-                        : "—"}
+                        : "\u2014"}
                     </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-right">
                     <div>
                       <div className="text-xs text-slate-500">ROI</div>
-                      <div className={`text-lg font-semibold ${call.currentRoiPct >= 0 ? "text-emerald-300" : "text-red-400"}`}>
+                      <div className={call.currentRoiPct >= 0 ? "text-lg font-semibold text-emerald-300" : "text-lg font-semibold text-red-400"}>
                         {formatPercent(call.currentRoiPct)}
                       </div>
                     </div>

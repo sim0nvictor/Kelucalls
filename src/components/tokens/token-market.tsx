@@ -266,11 +266,10 @@ export function TokenMarket({
               .includes(term)
           );
 
-    const direction = sortDesc ? -1 : 1;
-
     return [...filtered].sort((left, right) => {
       if (sortKey === "symbol") {
-        return left.symbol.localeCompare(right.symbol) * (sortDesc ? -1 : 1);
+        const byName = left.symbol.localeCompare(right.symbol);
+        return sortDesc ? -byName : byName;
       }
 
       const accessor = NUMERIC_ACCESSORS[sortKey];
@@ -282,7 +281,7 @@ export function TokenMarket({
       if (leftValue === null) return 1;
       if (rightValue === null) return -1;
 
-      return (leftValue - rightValue) * direction * -1;
+      return sortDesc ? rightValue - leftValue : leftValue - rightValue;
     });
   }, [query, rows, sortDesc, sortKey]);
 
@@ -334,7 +333,10 @@ export function TokenMarket({
   const headerButton = (key: SortKey, label: string, align: "left" | "right" = "right") => (
     <th
       key={key}
-      className={"pb-4 text-xs font-medium uppercase tracking-wider text-slate-500 " + (align === "left" ? "text-left" : "text-right")}
+      className={
+        "pb-4 text-xs font-medium uppercase tracking-wider text-slate-500 " +
+        (align === "left" ? "text-left" : "text-right")
+      }
     >
       <button
         type="button"
@@ -469,7 +471,8 @@ export function TokenMarket({
               : visibleRows.length + " of " + rows.length + " tokens match"}
           </h3>
           <p className="text-xs text-slate-500">
-            Prices, market caps and 24h moves from DexScreener \u00b7 24h volume {formatCompactUsd(combined24hVolume)}
+            {"Prices, market caps and 24h moves from DexScreener \u00b7 24h volume " +
+              formatCompactUsd(combined24hVolume)}
           </p>
         </div>
 
