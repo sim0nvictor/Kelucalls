@@ -1,15 +1,20 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { TrendingUp, Flame, Filter, ArrowUpDown } from "lucide-react";
+import { TrendingUp, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTrendingTokens, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
-import { getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
+import {
+  findSnapshot,
+  getTokenMarketSnapshotsForTokens,
+  type TokenMarketSnapshotMap,
+} from "@/lib/token-market";
+import { chainBrandColor, chainLabel, normalizeChainKey } from "@/lib/chains";
 import { formatMultiple, formatPercent } from "@/lib/metrics";
 import { TrendingTokenChart } from "./token-chart";
+import { TrendingControls, type SortOption } from "./trending-controls";
 import { TokenAvatar } from "@/components/token-avatar";
-import { ChainIcon, chainBrandColor } from "@/components/chain-icon";
+import { ChainIcon } from "@/components/chain-icon";
 import {
   LiveChangeCell,
   LiveMarketCapCell,
@@ -28,8 +33,57 @@ export const metadata = {
   description: "Live prices, market caps and call activity for the hottest tokens across tracked channels"
 };
 
+type TrendingToken = Awaited<ReturnType<typeof getTrendingTokens>>[number];
+
+type PageProps = {
+  searchParams: Promise<{ chain?: string; sort?: string; dir?: string }>;
+};
+
+/** Sort keys offered by the Sort button. The first entry is the default. */
+const SORT_OPTIONS: SortOption[] = [
+  { key: "channels", label: "Channels" },
+  { key: "calls", label: "Total calls" },
+  { key: "marketCap", label: "Market cap" },
+  { key: "price", label: "Price" },
+  { key: "change24h", label: "24h change" },
+  { key: "roi", label: "Average ROI" },
+  { key: "best", label: "Best multiple" },
+  { key: "recent", label: "Last called" },
+];
+
+const DEFAULT_SORT = SORT_OPTIONS[0].key;
+
+/** Value a token is ranked by. Null sorts to the bottom in both directions. */
+function sortValue(
+  token: TrendingToken,
+  key: string,
+  snapshots: TokenMarketSnapshotMap
+): number | null {
+  const snapshot = findSnapshot(snapshots, token.contractAddress, token.symbol);
+
+  switch (key) {
+    case "calls":
+      return token.totalCalls;
+    case "roi":
+      return token.averageRoiPct;
+    case "best":
+      return token.bestMultiple;
+    case "price":
+      return snapshot?.priceUsd ?? null;
+    case "marketCap":
+      return snapshot?.marketCapUsd ?? null;
+    case "change24h":
+      return snapshot?.change24h ?? null;
+    case "recent":
+      return token.lastCalledAt ? new Date(token.lastCalledAt).getTime() : null;
+    case "channels":
+    default:
+      return token.uniqueChannels;
+  }
+}
+
 // Chain call breakdown — computed from real data, not hardcoded
-function getChainBreakdown(tokens: Awaited<ReturnType<typeof getTrendingTokens>>) {
+function getChainBreakdown(tokens: TrendingToken[]) {
   const chainMap = new Map<string, number>();
   for (const t of tokens) {
     chainMap.set(t.chain, (chainMap.get(t.chain) ?? 0) + t.totalCalls);
@@ -40,7 +94,9 @@ function getChainBreakdown(tokens: Awaited<ReturnType<typeof getTrendingTokens>>
     .map(([chain, calls]) => ({ chain, calls }));
 }
 
-export default async function TrendingPage() {
+export default async function TrendingPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+
   // Fetch all trending tokens directly — not capped at 6 like getDashboardSnapshot
   const [tokens, sponsoredTokens] = await Promise.all([
     getTrendingTokens(100, "unique_channels"),
@@ -57,8 +113,58 @@ export default async function TrendingPage() {
   // Seed the first paint so prices are never blank before the first poll.
   const initialSnapshots = await getTokenMarketSnapshotsForTokens(marketQueries);
 
-  const topGainer = tokens[0] ?? null;
+  // ── Filter and sort state, read from the URL ────────────────────────
+  const chainOptionMap = new Map<string, { key: string; label: string; count: number }>();
+  for (const token of tokens) {
+    const key = normalizeChainKey(token.chain);
+    if (key === "") continue;
+
+    const existing = chainOptionMap.get(key);
+    if (existing) existing.count += 1;
+    else chainOptionMap.set(key, { key, label: chainLabel(token.chain), count: 1 });
+  }
+  const chainOptions = Array.from(chainOptionMap.values()).sort((a, b) => b.count - a.count);
+
+  const requestedChain = normalizeChainKey(params.chain);
+  const activeChain = chainOptionMap.has(requestedChain) ? requestedChain : null;
+
+  const requestedSort = typeof params.sort === "string" ? params.sort : "";
+  const activeSort = SORT_OPTIONS.some((option) => option.key === requestedSort)
+    ? requestedSort
+    : DEFAULT_SORT;
+  const activeDir: "asc" | "desc" = params.dir === "asc" ? "asc" : "desc";
+
+  const filteredTokens = activeChain
+    ? tokens.filter((token) => normalizeChainKey(token.chain) === activeChain)
+    : tokens;
+
+  const visibleTokens = [...filteredTokens].sort((left, right) => {
+    const leftValue = sortValue(left, activeSort, initialSnapshots);
+    const rightValue = sortValue(right, activeSort, initialSnapshots);
+
+    if (leftValue === null && rightValue === null) return 0;
+    if (leftValue === null) return 1;
+    if (rightValue === null) return -1;
+
+    return activeDir === "asc" ? leftValue - rightValue : rightValue - leftValue;
+  });
+
+  // "Most covered" always means most channels, regardless of the sort choice.
+  const topGainer =
+    [...filteredTokens].sort((a, b) => b.uniqueChannels - a.uniqueChannels)[0] ?? null;
+
+  // The breakdown stays global so it can be used to switch between chains.
   const chainBreakdown = getChainBreakdown(tokens);
+
+  const chainHref = (key: string | null) => {
+    const next = new URLSearchParams();
+    if (key) next.set("chain", key);
+    if (activeSort !== DEFAULT_SORT) next.set("sort", activeSort);
+    if (activeDir !== "desc") next.set("dir", activeDir);
+
+    const queryString = next.toString();
+    return queryString === "" ? "/trending" : "/trending?" + queryString;
+  };
 
   return (
     <LiveMarketProvider tokens={marketQueries} initialSnapshots={initialSnapshots}>
@@ -80,19 +186,21 @@ export default async function TrendingPage() {
             </Badge>
             <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Trending Tokens</h1>
             <p className="mt-2 text-slate-400">
-              {tokens.length} tokens tracked across all channels, with live price and market cap
+              {activeChain
+                ? `${visibleTokens.length} of ${tokens.length} tokens on ${chainLabel(activeChain)}`
+                : `${tokens.length} tokens tracked across all channels, with live price and market cap`}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm">
-              <Filter className="mr-2 size-4" />
-              Filter
-            </Button>
-            <Button variant="secondary" size="sm">
-              <ArrowUpDown className="mr-2 size-4" />
-              Sort
-            </Button>
-          </div>
+
+          <Suspense fallback={<div className="h-9 w-40 animate-pulse rounded-full bg-white/5" />}>
+            <TrendingControls
+              chains={chainOptions}
+              sorts={SORT_OPTIONS}
+              activeChain={activeChain}
+              activeSort={activeSort}
+              activeDir={activeDir}
+            />
+          </Suspense>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -105,7 +213,7 @@ export default async function TrendingPage() {
                 </div>
               </div>
               <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-white/5" />}>
-                <TrendingTokenChart tokens={tokens.slice(0, 20)} />
+                <TrendingTokenChart tokens={visibleTokens.slice(0, 20)} />
               </Suspense>
             </CardContent>
           </Card>
@@ -160,22 +268,33 @@ export default async function TrendingPage() {
               </CardContent>
             </Card>
 
-            {/* Real chain breakdown from actual data */}
+            {/* Real chain breakdown — each row filters the table */}
             <Card className="border-white/8 bg-slate-950/70">
               <CardContent className="p-5">
                 <h3 className="font-semibold text-white">By Chain</h3>
-                <div className="mt-4 space-y-3">
-                  {chainBreakdown.map((item) => (
-                    <div key={item.chain} className="flex items-center justify-between">
-                      <ChainIcon chain={item.chain} size={20} showLabel />
-                      <span
-                        className="text-sm font-medium"
-                        style={{ color: chainBrandColor(item.chain) }}
+                <p className="mt-1 text-xs text-slate-500">Tap a chain to filter</p>
+                <div className="mt-4 space-y-2">
+                  {chainBreakdown.map((item) => {
+                    const key = normalizeChainKey(item.chain);
+                    const isActive = key === activeChain;
+
+                    return (
+                      <Link
+                        key={item.chain}
+                        href={chainHref(isActive ? null : key)}
+                        scroll={false}
+                        className={`flex items-center justify-between rounded-xl px-2 py-1.5 transition-colors ${isActive ? "bg-cyan-400/10 ring-1 ring-cyan-400/30" : "hover:bg-white/5"}`}
                       >
-                        {item.calls} calls
-                      </span>
-                    </div>
-                  ))}
+                        <ChainIcon chain={item.chain} size={20} showLabel />
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: chainBrandColor(item.chain) }}
+                        >
+                          {item.calls} calls
+                        </span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -186,81 +305,98 @@ export default async function TrendingPage() {
         <Card className="border-white/8 bg-slate-950/70">
           <CardContent className="p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-white">All {tokens.length} Trending Tokens</h2>
-              <p className="text-xs text-slate-500">Price, market cap and 24h move from DexScreener</p>
+              <h2 className="text-lg font-semibold text-white">
+                {activeChain ? `${chainLabel(activeChain)} Tokens` : `All ${tokens.length} Trending Tokens`}
+              </h2>
+              <p className="text-xs text-slate-500">
+                Showing {visibleTokens.length} of {tokens.length} · sorted by{" "}
+                {(SORT_OPTIONS.find((option) => option.key === activeSort)?.label ?? "").toLowerCase()}
+              </p>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px]">
-                <thead>
-                  <tr className="border-b border-white/8">
-                    {["#", "Token", "Chain", "Price", "24h", "Market Cap", "Calls", "Channels", "Avg ROI", "Best Multiple", "Last Called"].map((h) => (
-                      <th key={h} className={`pb-4 text-xs font-medium uppercase tracking-wider text-slate-500 ${h === "#" || h === "Token" || h === "Chain" ? "text-left" : "text-right"}`}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tokens.map((token, index) => (
-                    <tr key={token.id} className="border-b border-white/5 transition-colors hover:bg-white/5">
-                      <td className="py-4">
-                        <span className={`inline-flex size-6 items-center justify-center text-xs font-bold ${index < 3 ? "text-yellow-300" : "text-slate-400"}`}>
-                          {index + 1}
-                        </span>
-                      </td>
-                      <td className="py-4">
-                        <Link href={`/tokens?symbol=${token.symbol}`} className="group">
-                          <div className="flex items-center gap-3">
-                            <TokenAvatar src={token.logoUrl} symbol={token.symbol} size={32} />
-                            <div>
-                              <div className="font-semibold text-white group-hover:text-purple-300 transition-colors">
-                                {token.symbol}
-                              </div>
-                              {token.name && <div className="text-xs text-slate-500">{token.name}</div>}
-                            </div>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="py-4">
-                        <ChainIcon chain={token.chain} size={20} showLabel />
-                      </td>
-                      <td className="py-4 text-right">
-                        <LivePriceCell
-                          address={token.contractAddress}
-                          symbol={token.symbol}
-                          className="font-medium text-white"
-                        />
-                      </td>
-                      <td className="py-4 text-right">
-                        <LiveChangeCell
-                          address={token.contractAddress}
-                          symbol={token.symbol}
-                          className="font-medium"
-                        />
-                      </td>
-                      <td className="py-4 text-right">
-                        <LiveMarketCapCell
-                          address={token.contractAddress}
-                          symbol={token.symbol}
-                          className="text-white"
-                        />
-                      </td>
-                      <td className="py-4 text-right text-white">{token.totalCalls}</td>
-                      <td className="py-4 text-right text-white">{token.uniqueChannels}</td>
-                      <td className="py-4 text-right">
-                        <span className={`font-medium ${token.averageRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                          {formatPercent(token.averageRoiPct)}
-                        </span>
-                      </td>
-                      <td className="py-4 text-right font-medium text-white">{formatMultiple(token.bestMultiple)}</td>
-                      <td className="py-4 text-right text-sm text-slate-500">
-                        {token.lastCalledAt ? new Date(token.lastCalledAt).toLocaleDateString() : "\u2014"}
-                      </td>
+
+            {visibleTokens.length === 0 ? (
+              <div className="py-12 text-center text-slate-400">
+                No tokens match this filter.{" "}
+                <Link href="/trending" className="text-cyan-400 hover:text-cyan-300">
+                  Clear it
+                </Link>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1100px]">
+                  <thead>
+                    <tr className="border-b border-white/8">
+                      {["#", "Token", "Chain", "Price", "24h", "Market Cap", "Calls", "Channels", "Avg ROI", "Best Multiple", "Last Called"].map((h) => (
+                        <th key={h} className={`pb-4 text-xs font-medium uppercase tracking-wider text-slate-500 ${h === "#" || h === "Token" || h === "Chain" ? "text-left" : "text-right"}`}>
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {visibleTokens.map((token, index) => (
+                      <tr key={token.id} className="border-b border-white/5 transition-colors hover:bg-white/5">
+                        <td className="py-4">
+                          <span className={`inline-flex size-6 items-center justify-center text-xs font-bold ${index < 3 ? "text-yellow-300" : "text-slate-400"}`}>
+                            {index + 1}
+                          </span>
+                        </td>
+                        <td className="py-4">
+                          <Link href={`/tokens?symbol=${token.symbol}`} className="group">
+                            <div className="flex items-center gap-3">
+                              <TokenAvatar src={token.logoUrl} symbol={token.symbol} size={32} />
+                              <div>
+                                <div className="font-semibold text-white group-hover:text-purple-300 transition-colors">
+                                  {token.symbol}
+                                </div>
+                                {token.name && <div className="text-xs text-slate-500">{token.name}</div>}
+                              </div>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="py-4">
+                          <Link href={chainHref(normalizeChainKey(token.chain))} scroll={false}>
+                            <ChainIcon chain={token.chain} size={20} showLabel />
+                          </Link>
+                        </td>
+                        <td className="py-4 text-right">
+                          <LivePriceCell
+                            address={token.contractAddress}
+                            symbol={token.symbol}
+                            className="font-medium text-white"
+                          />
+                        </td>
+                        <td className="py-4 text-right">
+                          <LiveChangeCell
+                            address={token.contractAddress}
+                            symbol={token.symbol}
+                            className="font-medium"
+                          />
+                        </td>
+                        <td className="py-4 text-right">
+                          <LiveMarketCapCell
+                            address={token.contractAddress}
+                            symbol={token.symbol}
+                            className="text-white"
+                          />
+                        </td>
+                        <td className="py-4 text-right text-white">{token.totalCalls}</td>
+                        <td className="py-4 text-right text-white">{token.uniqueChannels}</td>
+                        <td className="py-4 text-right">
+                          <span className={`font-medium ${token.averageRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {formatPercent(token.averageRoiPct)}
+                          </span>
+                        </td>
+                        <td className="py-4 text-right font-medium text-white">{formatMultiple(token.bestMultiple)}</td>
+                        <td className="py-4 text-right text-sm text-slate-500">
+                          {token.lastCalledAt ? new Date(token.lastCalledAt).toLocaleDateString() : "\u2014"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

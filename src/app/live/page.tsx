@@ -26,13 +26,44 @@ export const metadata = {
   description: "Real-time feed of crypto calls with live price and market cap as they happen"
 };
 
-export default async function LivePage() {
+type PageProps = {
+  searchParams: Promise<{ hits?: string }>;
+};
+
+/** Milestone filters behind the All / 2x+ / 10x+ buttons. */
+const HIT_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "2x", label: "2x+" },
+  { key: "10x", label: "10x+" },
+] as const;
+
+const CHIP_BASE =
+  "inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors";
+const CHIP_ACTIVE = "border-cyan-400/40 bg-cyan-400/10 text-cyan-200";
+const CHIP_IDLE =
+  "border-white/12 bg-white/6 text-slate-300 hover:border-cyan-400/30 hover:text-white";
+
+export default async function LivePage({ searchParams }: PageProps) {
+  const params = await searchParams;
+
+  const requestedHits = typeof params.hits === "string" ? params.hits : "all";
+  const activeHits = HIT_FILTERS.some((filter) => filter.key === requestedHits)
+    ? requestedHits
+    : "all";
+
   // Fetch independently at their real limits — not capped by getDashboardSnapshot
   const [liveCalls, trendingTokens, sponsoredTokens] = await Promise.all([
     getLiveCalls(50),       // show up to 50 recent calls
     getTrendingTokens(10),  // top 10 hot tokens for the sidebar
     getSponsoredTokenPlacements("live_feed", 2),
   ]);
+
+  const visibleCalls =
+    activeHits === "2x"
+      ? liveCalls.filter((call) => call.hit2x)
+      : activeHits === "10x"
+        ? liveCalls.filter((call) => call.hit10x)
+        : liveCalls;
 
   // One shared price feed for the call cards and the sidebar. Symbols are sent
   // too so calls with a missing contract address still show a price.
@@ -48,6 +79,8 @@ export default async function LivePage() {
   ];
 
   const initialSnapshots = await getTokenMarketSnapshotsForTokens(marketQueries);
+
+  const hitsHref = (key: string) => (key === "all" ? "/live" : "/live?hits=" + key);
 
   return (
     <LiveMarketProvider tokens={marketQueries} initialSnapshots={initialSnapshots}>
@@ -69,7 +102,9 @@ export default async function LivePage() {
             </Badge>
             <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Live Feed</h1>
             <p className="mt-2 text-slate-400">
-              {liveCalls.length} recent calls with live price, market cap and ROI tracking
+              {activeHits === "all"
+                ? `${liveCalls.length} recent calls with live price, market cap and ROI tracking`
+                : `${visibleCalls.length} of ${liveCalls.length} calls that hit ${activeHits}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -86,24 +121,33 @@ export default async function LivePage() {
           {/* ── Main call feed ── */}
           <Card className="border-white/8 bg-slate-950/70 lg:col-span-2">
             <CardContent className="p-6">
-              <div className="mb-6 flex items-center justify-between">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-3 w-3 animate-pulse items-center justify-center rounded-full bg-red-500">
                     <div className="h-1.5 w-1.5 rounded-full bg-red-400" />
                   </div>
                   <h2 className="text-xl font-semibold text-white">Recent Calls</h2>
-                  <span className="text-sm text-slate-500">({liveCalls.length} calls)</span>
+                  <span className="text-sm text-slate-500">({visibleCalls.length} calls)</span>
                 </div>
+
+                {/* Milestone filters */}
                 <div className="flex gap-2">
-                  <Button variant="secondary" size="sm">All</Button>
-                  <Button variant="secondary" size="sm">2x+</Button>
-                  <Button variant="secondary" size="sm">10x+</Button>
+                  {HIT_FILTERS.map((filter) => (
+                    <Link
+                      key={filter.key}
+                      href={hitsHref(filter.key)}
+                      scroll={false}
+                      className={`${CHIP_BASE} ${activeHits === filter.key ? CHIP_ACTIVE : CHIP_IDLE}`}
+                    >
+                      {filter.label}
+                    </Link>
+                  ))}
                 </div>
               </div>
 
               <div className="space-y-3">
-                {liveCalls.length > 0 ? (
-                  liveCalls.map((call) => (
+                {visibleCalls.length > 0 ? (
+                  visibleCalls.map((call) => (
                     <div
                       key={call.id}
                       className="group relative overflow-hidden rounded-2xl border border-white/8 bg-slate-900/60 p-4 transition-all hover:border-cyan-400/30 hover:bg-slate-900/80"
@@ -174,8 +218,18 @@ export default async function LivePage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-16 text-slate-500">
                     <Radio className="mb-4 size-12 opacity-50" />
-                    <p>No live calls at the moment</p>
-                    <p className="mt-1 text-sm">Check back soon for new calls.</p>
+                    <p>
+                      {activeHits === "all"
+                        ? "No live calls at the moment"
+                        : "No calls have hit " + activeHits + " yet"}
+                    </p>
+                    {activeHits === "all" ? (
+                      <p className="mt-1 text-sm">Check back soon for new calls.</p>
+                    ) : (
+                      <Link href="/live" scroll={false} className="mt-1 text-sm text-cyan-400 hover:text-cyan-300">
+                        Show all calls
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
