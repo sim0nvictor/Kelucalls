@@ -1,33 +1,35 @@
 import { ExternalLink, LineChart } from "lucide-react";
 
-import { chainLabel } from "@/lib/chains";
+import { chainLabel, chainSlug } from "@/lib/chains";
 
 const DEXSCREENER_BASE = "https://dexscreener.com/";
-const DEXSCREENER_SEARCH = "https://dexscreener.com/search?q=";
+const DEXSCREENER_SEARCH_URL = "https://dexscreener.com/search?q=";
 
 /**
- * Embed options: hide DexScreener's own header, trade list and toolbars so the
- * frame is just the candlestick chart on a dark background.
+ * Embed options: dark theme, USD price candles, 15m interval, and the trade
+ * list / tabs / info panels hidden so the chart itself fills the frame.
  */
-const EMBED_PARAMS =
-  "?embed=1&theme=dark&chartTheme=dark&trades=0&info=0&tabs=0&chartLeftToolbar=0&chartDefaultOnMobile=1&chartStyle=1&chartType=usd&interval=15";
+const DEX_EMBED_PARAMS =
+  "?embed=1&loadChartSettings=0&trades=0&tabs=0&info=0&chartLeftToolbar=0&chartTheme=dark&theme=dark&chartStyle=1&chartType=usd&interval=15";
 
-export type DexChartProps = {
-  /** Pair link reported by DexScreener for the deepest liquidity market. */
-  pairUrl: string | null;
-  /** DexScreener chain id, used to build a link when no pair is known. */
-  chainId: string | null;
+type DexChartProps = {
+  /** Pair URL resolved from the DexScreener API, when a pair was found. */
+  pairUrl?: string | null;
+  /** DexScreener chain id from the API snapshot. */
+  chainId?: string | null;
   contractAddress: string;
   symbol: string;
-  chain: string;
+  chain?: string | null;
+  className?: string;
 };
 
 /**
- * Live price chart, embedded straight from DexScreener.
+ * Live DexScreener price chart.
  *
- * This is the real market chart for the token's deepest liquidity pair, with
- * live candles, volume and timeframes. It replaces nothing: the previous
- * charts in this repo plotted randomly generated numbers.
+ * Prefers the exact pair URL returned by the market API (deepest liquidity
+ * pool). Falls back to the chain + token address route, which DexScreener
+ * redirects to the top pair for that token. If neither is resolvable, shows a
+ * link out instead of an empty frame.
  */
 export function DexChart({
   pairUrl,
@@ -35,64 +37,67 @@ export function DexChart({
   contractAddress,
   symbol,
   chain,
+  className = "",
 }: DexChartProps) {
-  // Prefer the exact pair. Fall back to the chain + token route, which
-  // DexScreener resolves to the primary pair on its side.
-  const source =
-    pairUrl ??
-    (chainId && contractAddress
-      ? DEXSCREENER_BASE + encodeURIComponent(chainId) + "/" + encodeURIComponent(contractAddress)
-      : null);
+  const resolvedChain = chainId ?? chainSlug(chain);
 
-  const searchUrl = DEXSCREENER_SEARCH + encodeURIComponent(contractAddress);
+  const baseUrl =
+    pairUrl && pairUrl.length > 0
+      ? pairUrl
+      : resolvedChain
+        ? DEXSCREENER_BASE + resolvedChain + "/" + contractAddress
+        : null;
+
+  const searchUrl = DEXSCREENER_SEARCH_URL + encodeURIComponent(contractAddress);
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section
+      className={`overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/75 ${className}`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-6 py-4">
         <div className="flex items-center gap-2">
-          <LineChart className="size-5 text-cyan-400" />
-          <h2 className="text-2xl font-semibold text-white">Live chart</h2>
-          <span className="text-sm text-slate-500">
-            {symbol} on {chainLabel(chain)}
-          </span>
+          <LineChart className="size-4 text-cyan-400" />
+          <h2 className="text-lg font-semibold text-white">{symbol} live chart</h2>
+          {chain && (
+            <span className="text-xs uppercase tracking-widest text-slate-500">
+              {chainLabel(chain)}
+            </span>
+          )}
         </div>
         <a
-          href={source ?? searchUrl}
+          href={baseUrl ?? searchUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm text-cyan-400 transition-colors hover:text-cyan-300"
+          className="inline-flex items-center gap-1 text-xs text-cyan-400 transition-colors hover:text-cyan-300"
         >
-          Open full chart
+          Open on DexScreener
           <ExternalLink className="size-3.5" />
         </a>
       </div>
 
-      {source ? (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80">
+      {baseUrl ? (
+        <div className="relative h-[420px] w-full sm:h-[520px]">
           <iframe
-            src={source + EMBED_PARAMS}
-            title={symbol + " live price chart"}
+            src={baseUrl + DEX_EMBED_PARAMS}
+            title={symbol + " price chart on DexScreener"}
             loading="lazy"
-            className="h-[420px] w-full border-0 sm:h-[520px]"
+            className="absolute inset-0 h-full w-full border-0"
             allow="clipboard-write"
           />
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-slate-950/80 px-6 py-12 text-center">
-          <p className="text-slate-400">
+        <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+          <LineChart className="size-8 text-slate-600" />
+          <p className="text-sm text-slate-400">
             No live market found for this token yet.
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            A chart appears here as soon as the token has a tradable pair on DexScreener.
           </p>
           <a
             href={searchUrl}
             target="_blank"
             rel="noreferrer"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm text-cyan-400 transition-colors hover:text-cyan-300"
+            className="text-sm text-cyan-400 transition-colors hover:text-cyan-300"
           >
-            Search DexScreener
-            <ExternalLink className="size-3.5" />
+            Search DexScreener for {symbol}
           </a>
         </div>
       )}

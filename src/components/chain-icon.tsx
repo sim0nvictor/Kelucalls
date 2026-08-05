@@ -3,78 +3,86 @@
 import { useEffect, useState } from "react";
 
 import {
+  chainBrandColor,
   chainIconUrl,
   chainLabel,
-  resolveChainMeta,
-  FALLBACK_CHAIN_COLOR,
+  type ChainMeta,
 } from "@/lib/chains";
 
-export type ChainIconProps = {
+// Re-exported for convenience so existing client imports keep working.
+export { chainBrandColor, chainIconUrl, chainLabel, normalizeChainKey, resolveChainMeta } from "@/lib/chains";
+export type { ChainMeta };
+
+type ChainIconProps = {
   chain: string | null | undefined;
   size?: number;
-  /** Show the chain name next to the logo. */
+  /** Render the chain name next to the logo. */
   showLabel?: boolean;
   className?: string;
+  labelClassName?: string;
 };
 
 /**
- * Renders the real chain logo (Solana, Ethereum, Base, ...) instead of a text
- * badge. Unknown chains and broken images fall back to a coloured initial.
+ * Chain logo with a coloured-initial fallback.
  *
- * Uses a plain <img> on purpose: the logos are tiny, always remote, and we
- * want an onError fallback rather than a build-time domain allowlist.
+ * Uses a plain <img> rather than next/image: DexScreener occasionally adds new
+ * chain slugs, and a broken remote image should degrade to the initial instead
+ * of throwing during optimisation.
  */
 export function ChainIcon({
   chain,
-  size = 20,
+  size = 18,
   showLabel = false,
   className = "",
+  labelClassName = "text-sm text-slate-300",
 }: ChainIconProps) {
-  const meta = resolveChainMeta(chain);
-  const label = chainLabel(chain);
   const iconUrl = chainIconUrl(chain);
+  const label = chainLabel(chain);
+  const color = chainBrandColor(chain);
   const [broken, setBroken] = useState(false);
 
-  // Reset when the row is reused for a different chain.
+  // A row can be re-used for a different chain while scrolling a virtual list.
   useEffect(() => {
     setBroken(false);
   }, [iconUrl]);
 
-  const showImage = Boolean(iconUrl) && !broken;
-  const color = meta?.color ?? FALLBACK_CHAIN_COLOR;
+  const showImage = iconUrl !== null && !broken;
+
+  const icon = showImage ? (
+    <img
+      src={iconUrl}
+      alt={label}
+      width={size}
+      height={size}
+      loading="lazy"
+      onError={() => setBroken(true)}
+      className="shrink-0 rounded-full"
+      style={{ width: size, height: size }}
+    />
+  ) : (
+    <span
+      aria-hidden="true"
+      className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: color + "33",
+        color,
+        fontSize: Math.max(9, Math.round(size * 0.5)),
+      }}
+    >
+      {label.charAt(0).toUpperCase()}
+    </span>
+  );
+
+  if (!showLabel) {
+    return className === "" ? icon : <span className={className}>{icon}</span>;
+  }
 
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`.trim()}>
-      {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={iconUrl ?? ""}
-          alt={label}
-          title={label}
-          width={size}
-          height={size}
-          loading="lazy"
-          onError={() => setBroken(true)}
-          className="shrink-0 rounded-full ring-1 ring-white/10"
-          style={{ width: size, height: size }}
-        />
-      ) : (
-        <span
-          title={label}
-          aria-label={label}
-          className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-1 ring-white/10"
-          style={{
-            width: size,
-            height: size,
-            backgroundColor: color + "33",
-            color,
-            fontSize: Math.max(9, Math.round(size * 0.5)),
-          }}
-        >
-          {label.charAt(0).toUpperCase()}
-        </span>
-      )}
-      {showLabel && <span className="truncate text-sm text-slate-300">{label}</span>}
+    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+      {icon}
+      <span className={labelClassName}>{label}</span>
     </span>
   );
 }
