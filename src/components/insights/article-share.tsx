@@ -29,6 +29,8 @@ type ShareTarget = {
   buildQuery: (encodedUrl: string, encodedTitle: string) => string;
 };
 
+const HTTPS_PREFIX = "https://";
+
 const SHARE_TARGETS: ShareTarget[] = [
   {
     key: "x",
@@ -99,12 +101,15 @@ export function ArticleShare({ title, url, summary }: ArticleShareProps) {
     const encodedUrl = encodeURIComponent(shareUrl);
     const encodedTitle = encodeURIComponent(title);
 
-    return SHARE_TARGETS.map((target) => ({
-      key: target.key,
-      label: target.label,
-      icon: target.icon,
-      href: `https://${target.host}${target.path}?${target.buildQuery(encodedUrl, encodedTitle)}`,
-    }));
+    return SHARE_TARGETS.map((target) => {
+      const query = target.buildQuery(encodedUrl, encodedTitle);
+      return {
+        key: target.key,
+        label: target.label,
+        icon: target.icon,
+        href: HTTPS_PREFIX + target.host + target.path + "?" + query,
+      };
+    });
   }, [shareUrl, title]);
 
   async function handleCopy() {
