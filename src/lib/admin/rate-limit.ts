@@ -1,3 +1,13 @@
+/**
+ * Fixed window rate limiter.
+ *
+ * KNOWN LIMITATION: the store is per process memory. On serverless each
+ * instance keeps its own counter and a cold start resets it, so this raises
+ * the cost of a brute force attempt without being a hard guarantee. Making it
+ * authoritative requires a shared store (a Postgres table or Redis), which is
+ * tracked as follow up work rather than done here.
+ */
+
 type Bucket = {
   count: number;
   resetAt: number;
@@ -26,4 +36,15 @@ export function checkRateLimit(key: string, limit: number, windowMs: number) {
   store.set(key, current);
 
   return { allowed: true, remaining: limit - current.count, resetAt: current.resetAt };
+}
+
+/**
+ * Drop a key's bucket.
+ *
+ * Called after a successful sign in. Without this an admin who mistypes a
+ * password a few times keeps burning the same budget after they get it right,
+ * and can lock themselves out on the next legitimate sign in.
+ */
+export function clearRateLimit(key: string) {
+  store.delete(key);
 }
