@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, ArrowUpRight, Compass, BookOpen } from "lucide-react";
+import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, ArrowUpRight, Compass, BookOpen, UserRound } from "lucide-react";
 
 import Logo from "@/assets/logo.jpg";
 import { Button } from "@/components/ui/button";
 import { formatPercent } from "@/lib/metrics";
 import { siteConfig } from "@/config/site";
+import { ACCOUNT_BASE_PATH } from "@/lib/auth/constants";
 
 const navLinks = [
   { href: "/",           label: "Home",       icon: Home },
@@ -191,6 +192,11 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  // The navbar is a client component with no access to the session, so the
+  // account entry always points at /account. That route redirects anonymous
+  // visitors to /login, which keeps this component session-free.
+  const isAccountActive = pathname.startsWith(ACCOUNT_BASE_PATH);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -244,6 +250,21 @@ export function Navbar() {
               </Link>
             );
           })}
+
+          {/* Account */}
+          <Link
+            href={ACCOUNT_BASE_PATH}
+            title="Your account"
+            aria-label="Your account"
+            className={`group relative ml-1 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-2.5 py-2 text-sm font-medium transition-all ${
+              isAccountActive
+                ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300"
+                : "border-white/10 text-slate-300 hover:bg-white/8 hover:text-white"
+            }`}
+          >
+            <UserRound className={`size-4 shrink-0 ${isAccountActive ? "text-cyan-400" : ""}`} />
+            <span className="hidden 2xl:inline">Account</span>
+          </Link>
         </nav>
 
         {/* Mobile hamburger */}
@@ -302,6 +323,20 @@ export function Navbar() {
               );
             })}
           </nav>
+
+          {/* Account */}
+          <Link
+            href={ACCOUNT_BASE_PATH}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`mt-2 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+              isAccountActive
+                ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300"
+                : "border-white/10 bg-white/5 text-slate-200"
+            }`}
+          >
+            <UserRound className="size-5" />
+            Account
+          </Link>
         </div>
       )}
     </header>
