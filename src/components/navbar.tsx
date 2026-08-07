@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, ArrowUpRight, Compass, BookOpen, UserRound } from "lucide-react";
+import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, ArrowUpRight, Compass, BookOpen, UserRound, Sparkles } from "lucide-react";
 
 import Logo from "@/assets/logo.jpg";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { ACCOUNT_BASE_PATH } from "@/lib/auth/constants";
 const navLinks = [
   { href: "/",           label: "Home",       icon: Home },
   { href: "/trending",   label: "Trending",   icon: TrendingUp },
+  { href: "/opportunities", label: "Opportunities", icon: Sparkles },
   { href: "/top-callers",label: "Top Callers",icon: Users },
   { href: "/channels",   label: "Channels",   icon: Layers },
   { href: "/tokens",     label: "Tokens",     icon: Activity },

@@ -8,6 +8,8 @@ import { ChainIcon } from "@/components/chain-icon";
 import { chainLabel } from "@/lib/chains";
 import { DexChart } from "@/components/tokens/dex-chart";
 import { LiveTokenPrice } from "@/components/tokens/live-token-price";
+import { IntentPanel } from "@/components/intent/intent-panel";
+import { getIntentHistory, getTokenIntent } from "@/lib/intent/queries";
 import { findSnapshot, getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
 import { withSupabase } from "@/lib/supabase";
 import { formatPercent, formatMultiple, toNumber } from "@/lib/metrics";
@@ -147,13 +149,19 @@ export default async function TokenDetailPage({ params }: PageProps) {
   const { token, stats, calls } = data;
 
   // Resolve the deepest liquidity pair so the chart points at a real market.
-  const snapshots = await getTokenMarketSnapshotsForTokens([
-    { address: token.contractAddress, symbol: token.symbol },
+  // The KeluScore reads run alongside it rather than after it, so the Intent
+  // section costs no extra round trip in the critical path.
+  const [snapshots, intent, intentHistory] = await Promise.all([
+    getTokenMarketSnapshotsForTokens([
+      { address: token.contractAddress, symbol: token.symbol },
+    ]),
+    getTokenIntent(token.id),
+    getIntentHistory(token.id, 60),
   ]);
   const snapshot = findSnapshot(snapshots, token.contractAddress, token.symbol);
 
   const dexUrl = DEXSCREENER_SEARCH_URL + encodeURIComponent(token.contractAddress);
-  const shortAddr = token.contractAddress.slice(0, 6) + "\u2026" + token.contractAddress.slice(-4);
+  const shortAddr = token.contractAddress.slice(0, 6) + "…" + token.contractAddress.slice(-4);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
@@ -231,6 +239,9 @@ export default async function TokenDetailPage({ params }: PageProps) {
         ))}
       </div>
 
+      {/* KeluScore intent breakdown */}
+      <IntentPanel intent={intent} symbol={token.symbol} history={intentHistory} />
+
       {/* Calls table */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-white">All calls for {token.symbol}</h2>
@@ -279,7 +290,7 @@ export default async function TokenDetailPage({ params }: PageProps) {
                         ? call.entryPriceUsd < 0.0001
                           ? call.entryPriceUsd.toExponential(2)
                           : call.entryPriceUsd.toPrecision(4)
-                        : "\u2014"}
+                        : "—"}
                     </div>
                   </div>
 
