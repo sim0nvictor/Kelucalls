@@ -6,8 +6,14 @@ import {
   ADMIN_ACCESS_COOKIE,
   ADMIN_BASE_PATH,
   ADMIN_EXPIRES_COOKIE,
+  ADMIN_REFRESH_COOKIE,
   ADMIN_SIGN_IN_PATH
 } from "@/lib/admin/constants";
+import {
+  buildAdminSessionCookies,
+  type AdminCookieWrite
+} from "@/lib/admin/session-cookies";
+import { refreshAdminSession } from "@/lib/admin/session-refresh";
 import {
   ACCOUNT_BASE_PATH,
   AUTH_ROUTES,
@@ -96,13 +102,53 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Admin gate: unchanged. Cookie presence is only a hint; the real check
-  // happens server side in requireAdminIdentity().
+  // Admin gate. Cookie presence is only a hint; the real check still happens
+  // server side in requireAdminIdentity().
   if (pathname.startsWith(ADMIN_BASE_PATH)) {
     const isSignInRoute = pathname === ADMIN_SIGN_IN_PATH;
     const accessToken = request.cookies.get(ADMIN_ACCESS_COOKIE)?.value;
     const expiresAt = Number(request.cookies.get(ADMIN_EXPIRES_COOKIE)?.value ?? 0);
-    const hasValidSessionHint = Boolean(accessToken) && (!expiresAt || expiresAt > Date.now());
+    const refreshToken = request.cookies.get(ADMIN_REFRESH_COOKIE)?.value;
+    const accessTokenLooksLive = Boolean(accessToken) && (!expiresAt || expiresAt > Date.now());
+
+    let refreshedCookies: AdminCookieWrite[] = [];
+
+    /**
+     * THE FIX. The refresh token was written at sign in and then never read by
+     * anything, so once the access token aged out (about an hour) the next
+     * click bounced the admin to the sign in page even though a perfectly good
+     * refresh token was sitting in the browser.
+     *
+     * This has to happen in middleware. getAdminIdentity() runs inside a
+     * Server Component render, where cookies().set() throws, so it physically
+     * cannot renew its own session.
+     */
+    if (!accessTokenLooksLive && refreshToken) {
+      const session = await refreshAdminSession(refreshToken);
+
+      if (session) {
+        refreshedCookies = buildAdminSessionCookies(session);
+
+        // Update the inbound request too, then rebuild the cookie header, so
+        // the render happening on THIS request sees the new token instead of
+        // waiting for the browser's next round trip.
+        //
+        // Deliberately not a redirect: admin server actions POST to the same
+        // path, and a redirect would downgrade them to GET and drop the action.
+        for (const write of refreshedCookies) {
+          request.cookies.set(write.name, write.value);
+        }
+        requestHeaders.set(
+          "cookie",
+          request.cookies
+            .getAll()
+            .map((cookie) => `${cookie.name}=${cookie.value}`)
+            .join("; ")
+        );
+      }
+    }
+
+    const hasValidSessionHint = accessTokenLooksLive || refreshedCookies.length > 0;
 
     if (!isSignInRoute && !hasValidSessionHint) {
       const loginUrl = new URL(ADMIN_SIGN_IN_PATH, request.url);
@@ -114,6 +160,9 @@ export async function middleware(request: NextRequest) {
 
     // The admin surface manages its own cookies; skip the public session work.
     const response = NextResponse.next({ request: { headers: requestHeaders } });
+    for (const write of refreshedCookies) {
+      response.cookies.set(write.name, write.value, write.options);
+    }
     applySecurityHeaders(response);
     return response;
   }
@@ -135,12 +184,10 @@ export async function middleware(request: NextRequest) {
   }
 
   /**
-   * Refresh the Supabase session on every public request.
-   *
-   * This is the piece the admin system is missing: it stores a refresh token
-   * and never uses it, so admins get silently signed out about once an hour
-   * when the access token expires. Calling getUser() here rotates the token
-   * and writes the new cookies onto the outgoing response.
+   * Refresh the Supabase session on every public request. Calling getUser()
+   * here rotates the token and writes the new cookies onto the outgoing
+   * response. The admin branch above now does the equivalent for its own
+   * separate cookie set.
    */
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
