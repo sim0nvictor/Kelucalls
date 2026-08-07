@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { ACCOUNT_BASE_PATH } from "@/lib/auth/constants";
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
+import type { ProfileFormState } from "@/lib/account/profile-state";
 
 /**
  * Write actions for the account area.
@@ -11,6 +12,10 @@ import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
  * Every one of these re-reads the user from getUser() rather than trusting an
  * id passed in from the client. RLS would catch a forged user_id anyway, but
  * defence in depth costs nothing here.
+ *
+ * IMPORTANT: this file carries the "use server" directive, so it may only
+ * export async functions. Plain values belong in ./profile-state.ts. Type-only
+ * exports are erased at compile time and are safe to keep here.
  */
 
 export type AccountActionResult = {
@@ -19,6 +24,8 @@ export type AccountActionResult = {
   code?: "unauthenticated" | "not_configured" | "failed";
   error?: string;
 };
+
+export type { ProfileFormState };
 
 const OK: AccountActionResult = { ok: true };
 
@@ -199,14 +206,6 @@ export async function deleteAlertRuleAction(ruleId: string): Promise<AccountActi
 // ---------------------------------------------------------------------------
 // Profile
 // ---------------------------------------------------------------------------
-
-export type ProfileFormState = {
-  status: "idle" | "error" | "success";
-  message?: string;
-  fieldErrors?: Partial<Record<string, string>>;
-};
-
-export const IDLE_PROFILE_STATE: ProfileFormState = { status: "idle" };
 
 function readString(formData: FormData, key: string): string {
   const value = formData.get(key);

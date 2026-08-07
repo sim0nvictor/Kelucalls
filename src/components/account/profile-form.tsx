@@ -2,10 +2,8 @@
 
 import { useActionState } from "react";
 
-import {
-  IDLE_PROFILE_STATE,
-  updateProfileAction
-} from "@/lib/account/actions";
+import { updateProfileAction } from "@/lib/account/actions";
+import { IDLE_PROFILE_STATE } from "@/lib/account/profile-state";
 import { AuthBanner, SubmitButton, TextField } from "@/components/auth/form-primitives";
 import type { Profile } from "@/lib/auth/session";
 
