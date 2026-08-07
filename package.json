@@ -30,7 +30,7 @@
     "db:seed": "node prisma/seed.mjs"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.5.2",
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/postcss": "^4.2.4",
     "axios": "^1.13.2",
