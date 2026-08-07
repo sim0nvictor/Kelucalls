@@ -5,12 +5,15 @@ import { createClient } from "@supabase/supabase-js";
 import {
   ADMIN_ACCESS_COOKIE,
   ADMIN_BASE_PATH,
-  ADMIN_COOKIE_PATH,
   ADMIN_EXPIRES_COOKIE,
   ADMIN_REFRESH_COOKIE,
-  ADMIN_SESSION_MAX_AGE,
   ADMIN_SIGN_IN_PATH
 } from "@/lib/admin/constants";
+import {
+  buildAdminSessionClearCookies,
+  buildAdminSessionCookies,
+  type AdminSessionLike
+} from "@/lib/admin/session-cookies";
 import { getSupabaseAnonKey, getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/server-env";
 
 type AdminRole = "super_admin" | "admin" | "analyst" | "moderator";
@@ -22,13 +25,38 @@ export type AdminIdentity = {
   role: AdminRole;
 };
 
+/**
+ * Why these codes exist: sign in used to fail with a single generic Error, so
+ * a wrong password, an account missing from admin_users, and a missing
+ * environment variable all rendered the same "invalid credentials" message.
+ * That made a misconfigured deploy indistinguishable from a typo. The code
+ * lets the caller show something specific without leaking anything a stranger
+ * could use to enumerate accounts.
+ */
+export type AdminAuthErrorCode =
+  | "not_configured"
+  | "invalid_credentials"
+  | "not_admin"
+  | "unknown";
+
+export class AdminAuthError extends Error {
+  readonly code: AdminAuthErrorCode;
+
+  constructor(code: AdminAuthErrorCode, message: string) {
+    super(message);
+    this.name = "AdminAuthError";
+    this.code = code;
+  }
+}
+
 function getSupabaseConfig() {
   const url = getSupabaseUrl();
   const anonKey = getSupabaseAnonKey();
   const serviceRoleKey = getSupabaseServiceRoleKey();
 
   if (!url || !anonKey || !serviceRoleKey) {
-    throw new Error(
+    throw new AdminAuthError(
+      "not_configured",
       "Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY."
     );
   }
@@ -63,59 +91,24 @@ function buildUnauthorizedRedirect(nextPath?: string) {
   return `${ADMIN_SIGN_IN_PATH}?next=${encodeURIComponent(fallback)}`;
 }
 
-function getCookieExpiry(maxAgeSeconds: number) {
-  return new Date(Date.now() + maxAgeSeconds * 1000);
-}
-
-export async function setAdminSessionCookies(session: {
-  access_token: string;
-  refresh_token?: string;
-  expires_in?: number;
-}) {
+/**
+ * Cookie attributes are built by @/lib/admin/session-cookies so that this
+ * module and middleware.ts cannot drift apart. Middleware refreshes the same
+ * session onto a NextResponse and must write byte identical attributes.
+ */
+export async function setAdminSessionCookies(session: AdminSessionLike) {
   const cookieStore = await cookies();
-  const maxAge = session.expires_in && session.expires_in > 0 ? session.expires_in : ADMIN_SESSION_MAX_AGE;
 
-  cookieStore.set(ADMIN_ACCESS_COOKIE, session.access_token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: ADMIN_COOKIE_PATH,
-    maxAge,
-    expires: getCookieExpiry(maxAge)
-  });
-
-  if (session.refresh_token) {
-    cookieStore.set(ADMIN_REFRESH_COOKIE, session.refresh_token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: ADMIN_COOKIE_PATH,
-      maxAge: ADMIN_SESSION_MAX_AGE * 7,
-      expires: getCookieExpiry(ADMIN_SESSION_MAX_AGE * 7)
-    });
+  for (const write of buildAdminSessionCookies(session)) {
+    cookieStore.set(write.name, write.value, write.options);
   }
-
-  cookieStore.set(ADMIN_EXPIRES_COOKIE, String(Date.now() + maxAge * 1000), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: ADMIN_COOKIE_PATH,
-    maxAge,
-    expires: getCookieExpiry(maxAge)
-  });
 }
 
 export async function clearAdminSessionCookies() {
   const cookieStore = await cookies();
-  for (const name of [ADMIN_ACCESS_COOKIE, ADMIN_REFRESH_COOKIE, ADMIN_EXPIRES_COOKIE]) {
-    cookieStore.set(name, "", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: ADMIN_COOKIE_PATH,
-      maxAge: 0,
-      expires: new Date(0)
-    });
+
+  for (const write of buildAdminSessionClearCookies()) {
+    cookieStore.set(write.name, write.value, write.options);
   }
 }
 
@@ -178,7 +171,7 @@ export async function signInAdminWithPassword(email: string, password: string) {
   const { data, error } = await authClient.auth.signInWithPassword({ email, password });
 
   if (error || !data.session || !data.user) {
-    throw new Error("Invalid admin credentials.");
+    throw new AdminAuthError("invalid_credentials", "Invalid admin credentials.");
   }
 
   const serviceClient = createServiceRoleClient();
@@ -190,7 +183,10 @@ export async function signInAdminWithPassword(email: string, password: string) {
     .maybeSingle();
 
   if (adminError || !adminUser) {
-    throw new Error("This account is not authorized for admin access.");
+    throw new AdminAuthError(
+      "not_admin",
+      "This account is not authorized for admin access."
+    );
   }
 
   await serviceClient
