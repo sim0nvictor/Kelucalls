@@ -9,7 +9,7 @@ import { chainLabel } from "@/lib/chains";
 import { DexChart } from "@/components/tokens/dex-chart";
 import { LiveTokenPrice } from "@/components/tokens/live-token-price";
 import { IntentPanel } from "@/components/intent/intent-panel";
-import { getIntentHistory, getTokenIntent } from "@/lib/intent/queries";
+import { getIntentHistory, getTokenIntent, getTokenSummary } from "@/lib/intent/queries";
 import { findSnapshot, getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
 import { withSupabase } from "@/lib/supabase";
 import { formatPercent, formatMultiple, toNumber } from "@/lib/metrics";
@@ -150,13 +150,15 @@ export default async function TokenDetailPage({ params }: PageProps) {
 
   // Resolve the deepest liquidity pair so the chart points at a real market.
   // The KeluScore reads run alongside it rather than after it, so the Intent
-  // section costs no extra round trip in the critical path.
-  const [snapshots, intent, intentHistory] = await Promise.all([
+  // section costs no extra round trip in the critical path. The summary is a
+  // cached row, never a model call, so it is safe in the render path.
+  const [snapshots, intent, intentHistory, intentSummary] = await Promise.all([
     getTokenMarketSnapshotsForTokens([
       { address: token.contractAddress, symbol: token.symbol },
     ]),
     getTokenIntent(token.id),
     getIntentHistory(token.id, 60),
+    getTokenSummary(token.id),
   ]);
   const snapshot = findSnapshot(snapshots, token.contractAddress, token.symbol);
 
@@ -240,7 +242,12 @@ export default async function TokenDetailPage({ params }: PageProps) {
       </div>
 
       {/* KeluScore intent breakdown */}
-      <IntentPanel intent={intent} symbol={token.symbol} history={intentHistory} />
+      <IntentPanel
+        intent={intent}
+        symbol={token.symbol}
+        history={intentHistory}
+        summary={intentSummary}
+      />
 
       {/* Calls table */}
       <section className="space-y-4">
