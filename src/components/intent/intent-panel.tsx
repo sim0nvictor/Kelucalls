@@ -1,11 +1,13 @@
 import { Info } from "lucide-react";
 
+import { IntentSummary } from "@/components/intent/intent-summary";
 import { ScoreBadge } from "@/components/intent/score-badge";
 import { ScoreBar } from "@/components/intent/score-bar";
 import {
   ScoreHistoryChart,
   type TimelinePoint
 } from "@/components/intent/score-history-chart";
+import type { IntentSummary as IntentSummaryData } from "@/lib/intent/queries";
 import { GRADE_DESCRIPTIONS, type IntentSignal, type TokenIntent } from "@/lib/intent/types";
 
 // Re-exported so existing importers of TimelinePoint keep working.
@@ -24,15 +26,20 @@ const TONE_STYLES: Record<IntentSignal["tone"], string> = {
  * Adding this to a page cannot slow that page down beyond the single query
  * that fetched the row. The one client component is the history chart, which
  * is deliberately isolated so the rest of this section stays server-rendered.
+ *
+ * The summary prop is optional and defaults to null, so callers that do not
+ * fetch a summary keep working unchanged.
  */
 export function IntentPanel({
   intent,
   symbol,
-  history = []
+  history = [],
+  summary = null
 }: {
   intent: TokenIntent | null;
   symbol: string;
   history?: TimelinePoint[];
+  summary?: IntentSummaryData | null;
 }) {
   if (!intent) {
     return (
@@ -71,6 +78,8 @@ export function IntentPanel({
 
         <ScoreBadge score={intent.keluScore} grade={intent.grade} />
       </div>
+
+      <IntentSummary summary={summary} />
 
       {/* Headline sub-scores */}
       <div className="grid gap-5 sm:grid-cols-3">

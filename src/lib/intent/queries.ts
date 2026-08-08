@@ -47,6 +47,13 @@ export interface ScoreChange {
   createdAt: string;
 }
 
+export interface IntentSummary {
+  summary: string;
+  model: string;
+  generatedAt: string;
+  scoreAtGeneration: number | null;
+}
+
 const SCORE_FIELDS = [
   "token_id",
   "kelu_score",
@@ -282,4 +289,40 @@ export async function getScoreChanges(
       createdAt: row.created_at
     }));
   }, []);
+}
+
+/**
+ * Cached LLM narrative for one token, written by workers/intent-summaries.js.
+ *
+ * Returns null when no summary has been generated. Callers must treat that as
+ * "show nothing", never as a reason to generate text at request time.
+ */
+export async function getTokenSummary(tokenId: string): Promise<IntentSummary | null> {
+  if (!tokenId) return null;
+
+  return withSupabase<IntentSummary | null>(async (supabase) => {
+    const { data, error } = await supabase
+      .from("intent_summaries")
+      .select("summary, model, generated_at, score_at_generation")
+      .eq("token_id", tokenId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    const row = data as unknown as {
+      summary: string;
+      model: string;
+      generated_at: string;
+      score_at_generation: number | null;
+    };
+
+    return {
+      summary: String(row.summary),
+      model: String(row.model),
+      generatedAt: row.generated_at,
+      scoreAtGeneration:
+        row.score_at_generation === null ? null : Number(row.score_at_generation)
+    };
+  }, null);
 }
