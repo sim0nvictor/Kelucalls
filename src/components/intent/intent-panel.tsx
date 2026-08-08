@@ -1,17 +1,17 @@
-import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { Info } from "lucide-react";
 
+import { IntentSummary } from "@/components/intent/intent-summary";
 import { ScoreBadge } from "@/components/intent/score-badge";
 import { ScoreBar } from "@/components/intent/score-bar";
+import {
+  ScoreHistoryChart,
+  type TimelinePoint
+} from "@/components/intent/score-history-chart";
+import type { IntentSummary as IntentSummaryData } from "@/lib/intent/queries";
 import { GRADE_DESCRIPTIONS, type IntentSignal, type TokenIntent } from "@/lib/intent/types";
 
-/**
- * Structurally compatible with IntentHistoryPoint from lib/intent/queries,
- * declared locally so this presentational component never imports server code.
- */
-export type TimelinePoint = {
-  keluScore: number;
-  capturedAt: string;
-};
+// Re-exported so existing importers of TimelinePoint keep working.
+export type { TimelinePoint };
 
 const TONE_STYLES: Record<IntentSignal["tone"], string> = {
   positive: "border-emerald-400/20 bg-emerald-400/5 text-emerald-200",
@@ -20,93 +20,26 @@ const TONE_STYLES: Record<IntentSignal["tone"], string> = {
 };
 
 /**
- * Score timeline as an inline SVG polyline.
- *
- * Deliberately not recharts: this is a static server-rendered sparkline, so it
- * ships zero client JavaScript and cannot slow the token page down. The richer
- * interactive chart is Phase 3.
- *
- * The Y axis is pinned to 0-100 rather than auto-scaled, so a token drifting
- * between 41 and 43 looks flat instead of looking like a rollercoaster.
- */
-function ScoreTimeline({ points }: { points: TimelinePoint[] }) {
-  if (points.length < 2) return null;
-
-  const width = 600;
-  const height = 64;
-  const step = width / (points.length - 1);
-
-  const coords = points.map((point, index) => {
-    const x = index * step;
-    const clamped = Math.max(0, Math.min(100, point.keluScore));
-    const y = height - (clamped / 100) * height;
-    return x.toFixed(1) + "," + y.toFixed(1);
-  });
-
-  const line = coords.join(" ");
-  const area = "0," + height + " " + line + " " + width + "," + height;
-
-  const first = points[0];
-  const last = points[points.length - 1];
-  const drift = last.keluScore - first.keluScore;
-
-  const DriftIcon = drift > 0.5 ? TrendingUp : drift < -0.5 ? TrendingDown : Minus;
-  const driftClass =
-    drift > 0.5 ? "text-emerald-300" : drift < -0.5 ? "text-red-400" : "text-slate-400";
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs uppercase tracking-widest text-slate-500">Timeline</h3>
-        <div className={"flex items-center gap-1.5 text-xs font-medium " + driftClass}>
-          <DriftIcon className="size-3.5" />
-          {drift > 0 ? "+" : ""}
-          {drift.toFixed(1)} over {points.length} snapshots
-        </div>
-      </div>
-
-      <svg
-        viewBox={"0 0 " + width + " " + height}
-        preserveAspectRatio="none"
-        className="h-16 w-full"
-        role="img"
-        aria-label="KeluScore over time"
-      >
-        <polygon points={area} fill="rgba(34,211,238,0.12)" />
-        <polyline
-          points={line}
-          fill="none"
-          stroke="rgb(34,211,238)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-
-      <div className="flex justify-between text-[11px] text-slate-600">
-        <span>{new Date(first.capturedAt).toLocaleDateString("en-US", { dateStyle: "medium" })}</span>
-        <span>{new Date(last.capturedAt).toLocaleDateString("en-US", { dateStyle: "medium" })}</span>
-      </div>
-    </div>
-  );
-}
-
-/**
  * The Intent section shown on a token page.
  *
  * Purely presentational: it receives already-computed data and renders it.
  * Adding this to a page cannot slow that page down beyond the single query
- * that fetched the row.
+ * that fetched the row. The one client component is the history chart, which
+ * is deliberately isolated so the rest of this section stays server-rendered.
+ *
+ * The summary prop is optional and defaults to null, so callers that do not
+ * fetch a summary keep working unchanged.
  */
 export function IntentPanel({
   intent,
   symbol,
-  history = []
+  history = [],
+  summary = null
 }: {
   intent: TokenIntent | null;
   symbol: string;
   history?: TimelinePoint[];
+  summary?: IntentSummaryData | null;
 }) {
   if (!intent) {
     return (
@@ -145,6 +78,8 @@ export function IntentPanel({
 
         <ScoreBadge score={intent.keluScore} grade={intent.grade} />
       </div>
+
+      <IntentSummary summary={summary} />
 
       {/* Headline sub-scores */}
       <div className="grid gap-5 sm:grid-cols-3">
@@ -258,7 +193,7 @@ export function IntentPanel({
         </div>
       )}
 
-      <ScoreTimeline points={history} />
+      <ScoreHistoryChart points={history} />
 
       <p className="text-[11px] text-slate-600">
         Last calculated{" "}
