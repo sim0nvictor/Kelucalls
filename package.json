@@ -26,6 +26,7 @@
     "worker:avatars": "node scripts/channel-avatar-sync.js",
     "worker:logos": "node workers/token-logo-backfill.js",
     "worker:intent": "node workers/intent-engine.js",
+    "worker:alerts": "node workers/intent-alerts.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.mjs"
