@@ -7,7 +7,8 @@ const RULE_LABELS: Record<string, string> = {
   channel_new_call: "New call posted",
   channel_big_win: "Big win from this caller",
   token_trending: "Token starts trending",
-  watchlist_digest: "Daily watchlist digest"
+  watchlist_digest: "Daily watchlist digest",
+  token_intent_spike: "KeluScore moves sharply"
 };
 
 function ruleLabel(ruleType: string) {
