@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Menu, Search, X, Activity, TrendingUp, Users, Radio, Layers, Home, ArrowUpRight, Compass, BookOpen, UserRound, Sparkles } from "lucide-react";
 
 import Logo from "@/assets/logo.jpg";
+import { NotificationBell } from "@/components/account/notification-bell";
 import { Button } from "@/components/ui/button";
 import { formatPercent } from "@/lib/metrics";
 import { siteConfig } from "@/config/site";
@@ -196,6 +197,10 @@ export function Navbar() {
   // The navbar is a client component with no access to the session, so the
   // account entry always points at /account. That route redirects anonymous
   // visitors to /login, which keeps this component session-free.
+  //
+  // NotificationBell follows the same rule: it fetches its own unread count
+  // after hydration and renders nothing for signed-out visitors, so adding it
+  // here does not make any page dynamic.
   const isAccountActive = pathname.startsWith(ACCOUNT_BASE_PATH);
 
   useEffect(() => {
@@ -251,6 +256,9 @@ export function Navbar() {
               </Link>
             );
           })}
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* Account */}
           <Link
@@ -324,6 +332,9 @@ export function Navbar() {
               );
             })}
           </nav>
+
+          {/* Notifications */}
+          <NotificationBell mobile onNavigate={() => setMobileMenuOpen(false)} />
 
           {/* Account */}
           <Link
