@@ -60,7 +60,14 @@ export type AccountNotification = {
   createdAt: string;
 };
 
+export type NotificationPage = {
+  notifications: AccountNotification[];
+  hasMore: boolean;
+};
+
 const CHANNEL_FIELDS = "id, slug, title, telegram_handle, avatar_url, is_verified, status";
+
+const NOTIFICATION_FIELDS = "id, title, body, url, read_at, created_at";
 
 type RawChannel = {
   id: string;
@@ -70,6 +77,15 @@ type RawChannel = {
   avatar_url: string | null;
   is_verified: boolean;
   status: string;
+};
+
+type RawNotification = {
+  id: string;
+  title: string;
+  body: string | null;
+  url: string | null;
+  read_at: string | null;
+  created_at: string;
 };
 
 /**
@@ -91,6 +107,17 @@ function toWatchedChannel(raw: RawChannel | null): WatchedChannel | null {
     avatarUrl: raw.avatar_url,
     isVerified: raw.is_verified,
     status: raw.status
+  };
+}
+
+function toNotification(row: RawNotification): AccountNotification {
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    url: row.url,
+    readAt: row.read_at,
+    createdAt: row.created_at
   };
 }
 
@@ -228,7 +255,7 @@ export const getRecentNotifications = cache(
 
     const { data, error } = await supabase
       .from("user_notifications")
-      .select("id, title, body, url, read_at, created_at")
+      .select(NOTIFICATION_FIELDS)
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -237,33 +264,86 @@ export const getRecentNotifications = cache(
       return [];
     }
 
-    type Row = {
-      id: string;
-      title: string;
-      body: string | null;
-      url: string | null;
-      read_at: string | null;
-      created_at: string;
-    };
+    return ((data ?? []) as RawNotification[]).map(toNotification);
+  }
+);
 
-    return ((data ?? []) as Row[]).map((row) => ({
-      id: row.id,
-      title: row.title,
-      body: row.body,
-      url: row.url,
-      readAt: row.read_at,
-      createdAt: row.created_at
-    }));
+/**
+ * The true unread count.
+ *
+ * Deliberately NOT derived from getRecentNotifications(): that returns a
+ * single page of rows, so counting unread inside it silently caps the badge at
+ * the page size. Someone with 40 unread would see 5. A head+count query asks
+ * the database for the real number and transfers no rows to do it.
+ */
+export const getUnreadNotificationCount = cache(async (): Promise<number> => {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return 0;
+
+  const { count, error } = await supabase
+    .from("user_notifications")
+    .select("id", { count: "exact", head: true })
+    .is("read_at", null);
+
+  if (error) {
+    console.error("[account] failed to count unread notifications:", error);
+    return 0;
+  }
+
+  return count ?? 0;
+});
+
+/**
+ * One page of the notification inbox.
+ *
+ * Arguments are positional primitives rather than an options object because
+ * cache() keys on argument identity: a fresh object literal per render would
+ * miss the cache every time.
+ *
+ * Fetches one row beyond the page to decide `hasMore` without a second count
+ * query.
+ */
+export const getNotificationPage = cache(
+  async (limit = 25, offset = 0, unreadOnly = false): Promise<NotificationPage> => {
+    const supabase = await createSupabaseServerClient();
+    if (!supabase) return { notifications: [], hasMore: false };
+
+    const safeLimit = Math.min(Math.max(Math.round(limit), 1), 100);
+    const safeOffset = Math.max(Math.round(offset), 0);
+
+    let query = supabase
+      .from("user_notifications")
+      .select(NOTIFICATION_FIELDS)
+      .order("created_at", { ascending: false })
+      .range(safeOffset, safeOffset + safeLimit);
+
+    if (unreadOnly) query = query.is("read_at", null);
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("[account] failed to load notification page:", error);
+      return { notifications: [], hasMore: false };
+    }
+
+    const rows = (data ?? []) as RawNotification[];
+    const hasMore = rows.length > safeLimit;
+
+    return {
+      notifications: (hasMore ? rows.slice(0, safeLimit) : rows).map(toNotification),
+      hasMore
+    };
   }
 );
 
 /** Counts for the dashboard tiles. */
 export const getAccountOverview = cache(async () => {
-  const [watchlist, alertRules, submissions, notifications] = await Promise.all([
+  const [watchlist, alertRules, submissions, notifications, unreadCount] = await Promise.all([
     getWatchlist(),
     getAlertRules(),
     getAccountSubmissions(),
-    getRecentNotifications(5)
+    getRecentNotifications(5),
+    getUnreadNotificationCount()
   ]);
 
   return {
@@ -271,7 +351,7 @@ export const getAccountOverview = cache(async () => {
     activeAlertCount: alertRules.filter((rule) => rule.isActive).length,
     submissionCount: submissions.length,
     pendingSubmissionCount: submissions.filter((s) => s.status === "pending").length,
-    unreadCount: notifications.filter((n) => !n.readAt).length,
+    unreadCount,
     notifications
   };
 });
