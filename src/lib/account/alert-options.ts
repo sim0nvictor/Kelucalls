@@ -51,8 +51,9 @@ export const ALERT_OPTIONS: readonly AlertOption[] = [
       "Several different callers start posting the same token inside a short window.",
     scope: "global",
     volume: "medium",
-    available: false,
-    defaultConditions: { min_unique_channels: 3 }
+    // Dispatcher: workers/trending-alerts.js
+    available: true,
+    defaultConditions: { min_unique_channels: 3, direction: "entered" }
   },
   {
     ruleType: "channel_new_call",
@@ -135,6 +136,9 @@ export const VOLUME_HINTS: Record<AlertVolume, string> = {
  *
  * This constant lives here rather than in a "use server" module because such
  * a module may only export async functions.
+ *
+ * The worker-side twin of this logic is workers/alert-prefs.js. If you change
+ * the default here, change it there too.
  */
 export const NOTIFICATIONS_ENABLED_KEY = "notifications_enabled";
 

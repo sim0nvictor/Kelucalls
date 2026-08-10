@@ -27,6 +27,7 @@
     "worker:logos": "node workers/token-logo-backfill.js",
     "worker:intent": "node workers/intent-engine.js",
     "worker:alerts": "node workers/intent-alerts.js",
+    "worker:trending-alerts": "node workers/trending-alerts.js",
     "worker:summaries": "node workers/intent-summaries.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
