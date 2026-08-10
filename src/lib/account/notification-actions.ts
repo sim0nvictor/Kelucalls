@@ -17,6 +17,8 @@ import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
  * NOTIFICATIONS_ENABLED_KEY therefore lives in ./alert-options.ts.
  */
 
+const NOTIFICATIONS_PATH = `${ACCOUNT_BASE_PATH}/notifications`;
+
 export type NotificationPrefResult = {
   ok: boolean;
   code?: "unauthenticated" | "not_configured" | "failed";
@@ -79,6 +81,51 @@ export async function setNotificationsEnabledAction(
   }
 
   revalidatePath(`${ACCOUNT_BASE_PATH}/alerts`);
+  revalidatePath(ACCOUNT_BASE_PATH);
+  return { ok: true };
+}
+
+/**
+ * Mark one notification read.
+ *
+ * The bulk version lives in ./actions.ts as markAllNotificationsReadAction and
+ * is reused as-is; this is the per-row counterpart used when someone opens a
+ * notification.
+ *
+ * The `is("read_at", null)` guard makes a repeat call a no-op instead of
+ * rewriting the timestamp, which matters because the client fires this while
+ * navigating away and may well fire it twice.
+ */
+export async function markNotificationReadAction(
+  notificationId: string
+): Promise<NotificationPrefResult> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      ok: false,
+      code: "not_configured",
+      error: "Accounts are temporarily unavailable."
+    };
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { ok: false, code: "unauthenticated", error: "Sign in to do that." };
+  }
+
+  const { error } = await supabase
+    .from("user_notifications")
+    .update({ status: "read", read_at: new Date().toISOString() })
+    .eq("id", notificationId)
+    .eq("user_id", userData.user.id)
+    .is("read_at", null);
+
+  if (error) {
+    console.error("[account] mark notification read failed:", error);
+    return { ok: false, code: "failed", error: "Could not update that notification." };
+  }
+
+  revalidatePath(NOTIFICATIONS_PATH);
   revalidatePath(ACCOUNT_BASE_PATH);
   return { ok: true };
 }
