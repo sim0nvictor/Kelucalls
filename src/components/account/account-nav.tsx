@@ -13,6 +13,7 @@ import { ACCOUNT_BASE_PATH } from "@/lib/auth/constants";
  */
 const ACCOUNT_LINKS = [
   { href: ACCOUNT_BASE_PATH, label: "Overview" },
+  { href: `${ACCOUNT_BASE_PATH}/notifications`, label: "Notifications" },
   { href: `${ACCOUNT_BASE_PATH}/watchlist`, label: "Watchlist" },
   { href: `${ACCOUNT_BASE_PATH}/alerts`, label: "Alerts" },
   { href: `${ACCOUNT_BASE_PATH}/submissions`, label: "My submissions" },
