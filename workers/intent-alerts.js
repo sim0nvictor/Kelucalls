@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { loadEnabledUserIds } from "./alert-prefs.js";
 import {
   LOG_LEVELS,
   chunk,
@@ -150,7 +151,13 @@ async function runCycle(supabase) {
   }
 
   if (!changes || changes.length === 0) {
-    return { pendingChanges: 0, activeRules: 0, notificationsCreated: 0, unsupportedDelivery: 0 };
+    return {
+      pendingChanges: 0,
+      activeRules: 0,
+      notificationsCreated: 0,
+      mutedByPreference: 0,
+      unsupportedDelivery: 0
+    };
   }
 
   const { data: rules, error: rulesError } = await supabase
@@ -171,6 +178,33 @@ async function runCycle(supabase) {
       pendingChanges: changes.length,
       activeRules: 0,
       notificationsCreated: 0,
+      mutedByPreference: 0,
+      unsupportedDelivery: 0
+    };
+  }
+
+  /*
+   * The master switch on the Alerts page is enforced here, not in the UI.
+   * A rule can stay active while its owner has notifications switched off
+   * globally, so the per-rule toggle and the account-wide one compose rather
+   * than fight: turning the master switch back on restores exactly the rules
+   * that were already there.
+   */
+  const enabledUserIds = await loadEnabledUserIds(
+    supabase,
+    rules.map((rule) => rule.user_id),
+    WORKER_NAME
+  );
+  const deliverableRules = rules.filter((rule) => enabledUserIds.has(rule.user_id));
+  const mutedByPreference = rules.length - deliverableRules.length;
+
+  if (deliverableRules.length === 0) {
+    await markNotified(supabase, changes.map((change) => change.id));
+    return {
+      pendingChanges: changes.length,
+      activeRules: rules.length,
+      notificationsCreated: 0,
+      mutedByPreference,
       unsupportedDelivery: 0
     };
   }
@@ -184,7 +218,7 @@ async function runCycle(supabase) {
   for (const change of changes) {
     const token = tokensById.get(change.token_id) || null;
 
-    for (const rule of rules) {
+    for (const rule of deliverableRules) {
       if (!ruleMatches(rule, change)) continue;
 
       const deliveryChannels = rule.delivery_channels || [];
@@ -241,6 +275,7 @@ async function runCycle(supabase) {
     pendingChanges: changes.length,
     activeRules: rules.length,
     notificationsCreated,
+    mutedByPreference,
     unsupportedDelivery
   };
 }
