@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { FollowChannelButton } from "@/components/account/follow-channel-button";
+import { MuteChannelToggle } from "@/components/account/mute-channel-toggle";
 import { getWatchlist } from "@/lib/account/queries";
 
 export default async function WatchlistPage() {
@@ -11,7 +12,8 @@ export default async function WatchlistPage() {
       <div>
         <h2 className="text-lg font-semibold text-white">Your watchlist</h2>
         <p className="mt-1 text-sm text-slate-400">
-          Channels you follow. These feed your alerts and your personalised activity feed.
+          Channels you follow. Use the bell on each one to decide whether it can notify
+          you - following and being notified are separate on purpose.
         </p>
       </div>
 
@@ -50,12 +52,15 @@ export default async function WatchlistPage() {
                   </p>
                 </div>
 
-                <FollowChannelButton
-                  channelId={channel.id}
-                  initialFollowing
-                  isSignedIn
-                  size="sm"
-                />
+                <div className="flex shrink-0 items-center gap-2">
+                  <MuteChannelToggle entryId={entry.id} initialMuted={entry.isMuted} />
+                  <FollowChannelButton
+                    channelId={channel.id}
+                    initialFollowing
+                    isSignedIn
+                    size="sm"
+                  />
+                </div>
               </li>
             );
           })}
