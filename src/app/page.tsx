@@ -109,7 +109,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </div>
                 <div className="rounded-2xl border border-white/8 bg-slate-950/80 p-4">
                   <div className="text-slate-500">Live call feed</div>
-                  <div className="mt-2 text-2xl font-semibold text-white">{snapshot.liveCalls.length}</div>
+                  <div className="mt-2 text-2xl font-semibold text-white">
+                    {snapshot.liveCalls.length}
+                  </div>
                 </div>
                 <div className="rounded-2xl border border-white/8 bg-slate-950/80 p-4">
                   <div className="text-slate-500">Trending tokens</div>
