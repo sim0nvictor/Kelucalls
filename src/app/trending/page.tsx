@@ -323,72 +323,86 @@ export default async function TrendingPage({ searchParams }: PageProps) {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px]">
+                <table className="w-full min-w-0 table-fixed sm:min-w-[1100px]">
                   <thead>
-                    <tr className="border-b border-white/8">
-                      {["#", "Token", "Chain", "Price", "24h", "Market Cap", "Calls", "Channels", "Avg ROI", "Best Multiple", "Last Called"].map((h) => (
-                        <th key={h} className={`pb-4 text-xs font-medium uppercase tracking-wider text-slate-500 ${h === "#" || h === "Token" || h === "Chain" ? "text-left" : "text-right"}`}>
+                    <tr className="border-b border-white/10 bg-white/[0.03]">
+                      {["#", "Token", "Chain", "Price", "24h", "Market Cap", "Calls", "Channels", "Avg ROI", "Best Multiple", "Last Called"].map((h) => {
+                        const hiddenOnMobile = ["Chain", "Market Cap", "Calls", "Channels", "Best Multiple", "Last Called"].includes(h);
+                        return (
+                        <th key={h} className={`${hiddenOnMobile ? "hidden sm:table-cell" : ""} px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 ${h === "#" || h === "Token" || h === "Chain" ? "text-left" : "text-right"}`}>
                           {h}
                         </th>
-                      ))}
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
                     {visibleTokens.map((token, index) => (
-                      <tr key={token.id} className="border-b border-white/5 transition-colors hover:bg-white/5">
-                        <td className="py-4">
+                      <tr key={token.id} className="border-b border-white/[0.07] transition-colors hover:bg-cyan-400/[0.045]">
+                        <td className="px-3 py-3 first:pl-4">
                           <span className={`inline-flex size-6 items-center justify-center text-xs font-bold ${index < 3 ? "text-yellow-300" : "text-slate-400"}`}>
                             {index + 1}
                           </span>
                         </td>
-                        <td className="py-4">
+                        <td className="px-3 py-3">
                           <Link href={`/tokens?symbol=${token.symbol}`} className="group">
                             <div className="flex items-center gap-3">
                               <TokenAvatar src={token.logoUrl} symbol={token.symbol} size={32} />
                               <div>
-                                <div className="font-semibold text-white group-hover:text-purple-300 transition-colors">
+                                <div className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
                                   {token.symbol}
                                 </div>
                                 {token.name && <div className="text-xs text-slate-500">{token.name}</div>}
                               </div>
                             </div>
                           </Link>
+                          <details className="mt-2 sm:hidden">
+                            <summary className="cursor-pointer text-xs text-cyan-300 marker:text-slate-600">More token data</summary>
+                            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                              <div><dt className="text-slate-500">Chain</dt><dd className="text-slate-300">{token.chain}</dd></div>
+                              <div><dt className="text-slate-500">Calls</dt><dd className="text-slate-300">{token.totalCalls}</dd></div>
+                              <div><dt className="text-slate-500">Channels</dt><dd className="text-slate-300">{token.uniqueChannels}</dd></div>
+                              <div><dt className="text-slate-500">Market cap</dt><dd className="text-slate-300"><LiveMarketCapCell address={token.contractAddress} symbol={token.symbol} /></dd></div>
+                              <div><dt className="text-slate-500">Best multiple</dt><dd className="text-slate-300">{formatMultiple(token.bestMultiple)}</dd></div>
+                              <div><dt className="text-slate-500">Last called</dt><dd className="text-slate-300">{token.lastCalledAt ? new Date(token.lastCalledAt).toLocaleDateString() : "—"}</dd></div>
+                            </dl>
+                          </details>
                         </td>
-                        <td className="py-4">
+                        <td className="hidden px-3 py-3 sm:table-cell">
                           <Link href={chainHref(normalizeChainKey(token.chain))} scroll={false}>
                             <ChainIcon chain={token.chain} size={20} showLabel />
                           </Link>
                         </td>
-                        <td className="py-4 text-right">
+                        <td className="px-3 py-3 text-right font-mono tabular-nums">
                           <LivePriceCell
                             address={token.contractAddress}
                             symbol={token.symbol}
                             className="font-medium text-white"
                           />
                         </td>
-                        <td className="py-4 text-right">
+                        <td className="px-3 py-3 text-right font-mono tabular-nums">
                           <LiveChangeCell
                             address={token.contractAddress}
                             symbol={token.symbol}
                             className="font-medium"
                           />
                         </td>
-                        <td className="py-4 text-right">
+                        <td className="hidden px-3 py-3 text-right font-mono tabular-nums sm:table-cell">
                           <LiveMarketCapCell
                             address={token.contractAddress}
                             symbol={token.symbol}
                             className="text-white"
                           />
                         </td>
-                        <td className="py-4 text-right text-white">{token.totalCalls}</td>
-                        <td className="py-4 text-right text-white">{token.uniqueChannels}</td>
-                        <td className="py-4 text-right">
-                          <span className={`font-medium ${token.averageRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-white sm:table-cell">{token.totalCalls}</td>
+                        <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-white sm:table-cell">{token.uniqueChannels}</td>
+                        <td className="px-3 py-3 text-right font-mono tabular-nums">
+                          <span className={`font-semibold ${token.averageRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
                             {formatPercent(token.averageRoiPct)}
                           </span>
                         </td>
-                        <td className="py-4 text-right font-medium text-white">{formatMultiple(token.bestMultiple)}</td>
-                        <td className="py-4 text-right text-sm text-slate-500">
+                        <td className="hidden px-3 py-3 text-right font-mono tabular-nums font-semibold text-white sm:table-cell">{formatMultiple(token.bestMultiple)}</td>
+                        <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-sm text-slate-500 sm:table-cell">
                           {token.lastCalledAt ? new Date(token.lastCalledAt).toLocaleDateString() : "\u2014"}
                         </td>
                       </tr>

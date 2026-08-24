@@ -1,10 +1,20 @@
 import Link from "next/link";
 
-import { ChannelCard } from "@/components/channel-card";
 import { SubmissionForm } from "@/components/submission-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  ChannelIdentity,
+  DataTable,
+  DataTableHeader,
+  DataTableRow,
+  MetricValue,
+  PerformanceValue,
+  StatusBadge,
+  VerificationBadge,
+} from "@/components/ui/data-table";
 import { getLeaderboard } from "@/lib/dashboard-data";
+import { formatMultiple } from "@/lib/metrics";
 import type { RankingMode } from "@/types/kelucalls";
 
 type ChannelsPageProps = {
@@ -47,11 +57,140 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_22rem]">
-        <div className="grid gap-6 xl:grid-cols-2">
-          {channels.map((channel, index) => (
-            <ChannelCard key={channel.id} channel={channel} rank={index + 1} />
-          ))}
-        </div>
+        <DataTable
+          caption="Tracked channel rankings"
+          minWidth="min-w-0 sm:min-w-[68rem]"
+          tableClassName="table-fixed"
+          className="self-start"
+        >
+          <DataTableHeader>
+            <th scope="col" className="w-14 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 first:pl-4">
+              Rank
+            </th>
+            <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+              Channel
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              Verification
+            </th>
+            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+              Calls
+            </th>
+            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+              Win Rate
+            </th>
+            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+              Avg ROI
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              Avg Multiple
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              Best Multiple
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              2x
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              10x
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              100x
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              PnL
+            </th>
+            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">
+              Status
+            </th>
+          </DataTableHeader>
+          <tbody>
+            {channels.map((channel, index) => (
+              <DataTableRow key={channel.id} interactive>
+                <td className="px-3 py-3 text-left first:pl-4">
+                  <span className={index < 3 ? "font-semibold text-yellow-300" : "font-semibold text-slate-400"}>
+                    #{index + 1}
+                  </span>
+                </td>
+                <td className="px-3 py-3">
+                  <ChannelIdentity
+                    href={`/channels/${channel.slug}`}
+                    title={channel.title}
+                    avatarUrl={channel.avatarUrl}
+                    description={channel.description}
+                  />
+                  <div className="mt-1 flex items-center gap-2 sm:hidden">
+                    <a
+                      href={channel.telegramUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-cyan-300 hover:text-cyan-200"
+                    >
+                      Telegram
+                    </a>
+                    <VerificationBadge verified={channel.isVerified} />
+                  </div>
+                  <details className="mt-2 sm:hidden">
+                    <summary className="cursor-pointer text-xs text-cyan-300 marker:text-slate-600">
+                      More metrics
+                    </summary>
+                    <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <div>
+                        <dt className="text-slate-500">Avg multiple</dt>
+                        <dd className="text-slate-300">{formatMultiple(channel.averageMultiple)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500">Best multiple</dt>
+                        <dd className="text-slate-300">{formatMultiple(channel.bestMultiple)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500">Milestones</dt>
+                        <dd className="text-slate-300">
+                          {channel.hit2xCount} / {channel.hit10xCount} / {channel.hit100xCount}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500">PnL</dt>
+                        <dd><PerformanceValue value={channel.simulatedCurrentPnlUsd} kind="currency" /></dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500">Status</dt>
+                        <dd><StatusBadge status={channel.status} /></dd>
+                      </div>
+                    </dl>
+                  </details>
+                </td>
+                <td className="hidden px-3 py-3 sm:table-cell">
+                  <VerificationBadge verified={channel.isVerified} />
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <MetricValue value={channel.totalCalls} />
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <PerformanceValue value={channel.winRatePct} />
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <PerformanceValue value={channel.averageRoiPct} />
+                </td>
+                <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">
+                  {formatMultiple(channel.averageMultiple)}
+                </td>
+                <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">
+                  {formatMultiple(channel.bestMultiple)}
+                </td>
+                <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">{channel.hit2xCount}</td>
+                <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">{channel.hit10xCount}</td>
+                <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">{channel.hit100xCount}</td>
+                <td className="hidden px-3 py-3 text-right sm:table-cell">
+                  <PerformanceValue value={channel.simulatedCurrentPnlUsd} kind="currency" />
+                </td>
+                <td className="hidden px-3 py-3 text-left last:pr-4 sm:table-cell">
+                  <StatusBadge status={channel.status} />
+                </td>
+              </DataTableRow>
+            ))}
+          </tbody>
+        </DataTable>
 
         <Card id="submissions" className="h-fit">
           <CardContent className="space-y-4">

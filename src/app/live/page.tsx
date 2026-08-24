@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Radio, Zap, Clock, TrendingUp, TrendingDown, Flame, Bell } from "lucide-react";
+import { Radio, Zap, Flame, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DataTable, DataTableHeader, DataTableRow } from "@/components/ui/data-table";
 import { getLiveCalls, getTrendingTokens, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
 import { getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
 import { formatMultiple, formatPercent } from "@/lib/metrics";
@@ -14,8 +15,8 @@ import {
   LiveMarketCapCell,
   LiveMarketProvider,
   LivePriceCell,
-  LivePriceWithCap,
 } from "@/components/tokens/live-market-cells";
+import { formatPrice } from "@/components/tokens/live-market-cells";
 import { siteConfig } from "@/config/site";
 
 export const revalidate = 0;
@@ -96,7 +97,7 @@ export default async function LivePage({ searchParams }: PageProps) {
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Badge className="border-red-400/20 bg-red-400/10 text-red-200 animate-pulse">
+            <Badge className="border-red-400/20 bg-red-400/10 text-red-200">
               <Zap className="mr-1.5 size-3" />
               Live
             </Badge>
@@ -145,94 +146,78 @@ export default async function LivePage({ searchParams }: PageProps) {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <DataTable caption="Recent live calls" minWidth="min-w-0 sm:min-w-[50rem]" tableClassName="table-fixed" className="rounded-xl">
                 {visibleCalls.length > 0 ? (
-                  visibleCalls.map((call) => (
-                    <div
-                      key={call.id}
-                      className="group relative overflow-hidden rounded-2xl border border-white/8 bg-slate-900/60 p-4 transition-all hover:border-cyan-400/30 hover:bg-slate-900/80"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                      <div className="relative flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <TokenAvatar
-                            src={call.tokenLogoUrl}
-                            symbol={call.tokenSymbol}
-                            size={40}
-                          />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/channels/${call.channelSlug}`}
-                                className="text-sm text-cyan-300 hover:text-cyan-200 transition-colors"
-                              >
-                                {call.channelTitle}
-                              </Link>
-                              <Clock className="size-3 text-slate-500" />
-                              <span className="text-xs text-slate-500">
-                                {new Date(call.calledAt).toLocaleTimeString()}
+                  <>
+                    <DataTableHeader>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 first:pl-4">Token</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Channel</th>
+                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Entry</th>
+                      <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Current</th>
+                      <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">ROI</th>
+                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Peak</th>
+                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">Time</th>
+                    </DataTableHeader>
+                    <tbody>
+                      {visibleCalls.map((call) => (
+                        <DataTableRow key={call.id} interactive>
+                          <td className="px-3 py-3 first:pl-4">
+                            <Link href={`/tokens?symbol=${call.tokenSymbol}`} className="flex items-center gap-2.5 hover:text-cyan-300">
+                              <TokenAvatar src={call.tokenLogoUrl} symbol={call.tokenSymbol} size={30} />
+                              <span>
+                                <span className="block font-semibold text-white">{call.tokenSymbol}</span>
+                                <span className="flex gap-1">
+                                  {call.hit2x && <Badge className="border-emerald-400/20 bg-emerald-400/10 px-1.5 py-0 text-[10px] text-emerald-200">2x</Badge>}
+                                  {call.hit10x && <Badge className="border-yellow-400/20 bg-yellow-400/10 px-1.5 py-0 text-[10px] text-yellow-200">10x</Badge>}
+                                  {call.hit100x && <Badge className="border-red-400/20 bg-red-400/10 px-1.5 py-0 text-[10px] text-red-200">100x</Badge>}
+                                </span>
                               </span>
-                            </div>
-                            <div className="mt-1 flex items-center gap-2">
-                              <span className="text-xl font-bold text-white">{call.tokenSymbol}</span>
-                              {call.hit2x && (
-                                <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">2x</Badge>
-                              )}
-                              {call.hit10x && (
-                                <Badge className="border-yellow-400/20 bg-yellow-400/10 text-yellow-200">10x</Badge>
-                              )}
-                              {call.hit100x && (
-                                <Badge className="border-red-400/20 bg-red-400/10 text-red-200">100x</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-6">
-                          <LivePriceWithCap
-                            address={call.contractAddress}
-                            symbol={call.tokenSymbol}
-                            fallbackPriceUsd={call.currentPriceUsd}
-                          />
-                          <div className="text-right">
-                            <div className="text-xs text-slate-500">Current ROI</div>
-                            <div className={`text-2xl font-bold ${call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                              {formatPercent(call.currentRoiPct)}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-xs text-slate-500">Peak Multiple</div>
-                            <div className="text-xl font-bold text-white">
-                              {formatMultiple(call.peakMultiple)}
-                            </div>
-                          </div>
-                          <div className={`flex size-10 items-center justify-center rounded-xl ${call.currentRoiPct > 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
-                            {call.currentRoiPct > 0
-                              ? <TrendingUp className="size-5 text-emerald-400" />
-                              : <TrendingDown className="size-5 text-red-400" />}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                            </Link>
+                            <details className="mt-1 sm:hidden">
+                              <summary className="cursor-pointer text-xs text-cyan-300 marker:text-slate-600">More call data</summary>
+                              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                <div><dt className="text-slate-500">Entry</dt><dd className="text-slate-300">{formatPrice(call.entryPriceUsd)}</dd></div>
+                                <div><dt className="text-slate-500">Peak</dt><dd className="text-slate-300">{formatMultiple(call.peakMultiple)}</dd></div>
+                                <div className="col-span-2"><dt className="text-slate-500">Called</dt><dd className="text-slate-300">{new Date(call.calledAt).toLocaleString()}</dd></div>
+                              </dl>
+                            </details>
+                          </td>
+                          <td className="max-w-40 px-3 py-3">
+                            <Link href={`/channels/${call.channelSlug}`} className="block truncate text-cyan-300 hover:text-cyan-200">{call.channelTitle}</Link>
+                          </td>
+                          <td className="hidden px-3 py-3 text-right font-medium text-slate-300 sm:table-cell">{formatPrice(call.entryPriceUsd)}</td>
+                          <td className="px-3 py-3 text-right font-semibold text-white">
+                            <LivePriceCell address={call.contractAddress} symbol={call.tokenSymbol} fallbackPriceUsd={call.currentPriceUsd} />
+                          </td>
+                          <td className={`px-3 py-3 text-right text-base font-bold ${call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>{formatPercent(call.currentRoiPct)}</td>
+                          <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{formatMultiple(call.peakMultiple)}</td>
+                          <td className="hidden whitespace-nowrap px-3 py-3 text-right text-xs text-slate-400 last:pr-4 sm:table-cell">{new Date(call.calledAt).toLocaleTimeString()}</td>
+                        </DataTableRow>
+                      ))}
+                    </tbody>
+                  </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-slate-500">
-                    <Radio className="mb-4 size-12 opacity-50" />
-                    <p>
-                      {activeHits === "all"
-                        ? "No live calls at the moment"
-                        : "No calls have hit " + activeHits + " yet"}
-                    </p>
-                    {activeHits === "all" ? (
-                      <p className="mt-1 text-sm">Check back soon for new calls.</p>
-                    ) : (
-                      <Link href="/live" scroll={false} className="mt-1 text-sm text-cyan-400 hover:text-cyan-300">
-                        Show all calls
-                      </Link>
-                    )}
-                  </div>
+                  <tbody>
+                    <tr>
+                      <td colSpan={7} className="px-4 py-16 text-center text-slate-500">
+                        <Radio className="mx-auto mb-4 size-12 opacity-50" />
+                        <p>
+                          {activeHits === "all"
+                            ? "No live calls at the moment"
+                            : "No calls have hit " + activeHits + " yet"}
+                        </p>
+                        {activeHits === "all" ? (
+                          <p className="mt-1 text-sm">Check back soon for new calls.</p>
+                        ) : (
+                          <Link href="/live" scroll={false} className="mt-1 block text-sm text-cyan-400 hover:text-cyan-300">
+                            Show all calls
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  </tbody>
                 )}
-              </div>
+              </DataTable>
             </CardContent>
           </Card>
 
