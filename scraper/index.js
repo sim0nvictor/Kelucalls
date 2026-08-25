@@ -27,7 +27,10 @@ logScraperEnvStatus(envState);
 
 const { NewMessage } = await import("telegram/events/index.js");
 
-const { telegram, supabase: supabaseEnv } = validateScraperEnv({ requireSupabase: true });
+const { telegram, supabase: supabaseEnv } = validateScraperEnv({
+  requireSupabase: true,
+  allowLegacySession: false,
+});
 
 const supabase = createClient(
   supabaseEnv.url ?? supabaseEnv.nextPublicUrl,
@@ -689,7 +692,18 @@ async function main() {
     { connectionRetries: 5 }
   );
 
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (error) {
+    if (error?.message?.includes("AUTH_KEY_DUPLICATED")) {
+      throw new Error(
+        "Telegram rejected the scraper session (AUTH_KEY_DUPLICATED). " +
+        "Stop other processes using this session, then create a fresh session with `npm run scraper:login` " +
+        "and store it as TELEGRAM_SCRAPER_SESSION."
+      );
+    }
+    throw error;
+  }
   LOG.info("Telegram connected");
 
   // Load channels from DB

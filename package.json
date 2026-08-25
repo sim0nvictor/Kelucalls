@@ -20,6 +20,7 @@
     "bot:start": "npm --workspace @kelucalls/bot run start",
     "bot:typecheck": "npm --workspace @kelucalls/bot run typecheck",
     "scraper": "node scraper/index.js",
+    "scraper:login": "node scraper/login.js",
     "worker:price": "node workers/price-update.js",
     "worker:trending": "node workers/trending-aggregate.js",
     "worker:all": "node workers/price-update.js & node workers/trending-aggregate.js",

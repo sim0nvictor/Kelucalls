@@ -45,7 +45,7 @@ async function getTelegramClient() {
 
     const apiId   = Number(requireEnv("TELEGRAM_API_ID"));
     const apiHash = requireEnv("TELEGRAM_API_HASH");
-    const session = requireEnv("TELEGRAM_SESSION");
+    const session = process.env.TELEGRAM_WEB_SESSION?.trim() || requireEnv("TELEGRAM_SESSION");
 
     const client = new TelegramClient(
       new StringSession(session),

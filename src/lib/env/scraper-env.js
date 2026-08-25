@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REQUIRED_TELEGRAM_ENV = ["TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION"];
+const REQUIRED_TELEGRAM_ENV = ["TELEGRAM_API_ID", "TELEGRAM_API_HASH"];
 const SUPABASE_ENV = [
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
@@ -91,6 +91,11 @@ export function logScraperEnvStatus(envState = loadedEnv) {
   for (const name of [...REQUIRED_TELEGRAM_ENV, ...SUPABASE_ENV]) {
     logEnvStatus(name);
   }
+
+  logEnvStatus("TELEGRAM_SCRAPER_SESSION");
+  if (!readEnv("TELEGRAM_SCRAPER_SESSION") && readEnv("TELEGRAM_SESSION")) {
+    console.log("[scraper-env] TELEGRAM_SESSION: present but ignored; generate a fresh TELEGRAM_SCRAPER_SESSION");
+  }
 }
 
 export function getRequiredEnv(name) {
@@ -102,12 +107,15 @@ export function getRequiredEnv(name) {
   return value;
 }
 
-export function validateScraperEnv({ requireSupabase = false } = {}) {
+export function validateScraperEnv({ requireSupabase = false, requireSession = true, allowLegacySession = false } = {}) {
   const required = requireSupabase
     ? [...REQUIRED_TELEGRAM_ENV, "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]
     : REQUIRED_TELEGRAM_ENV;
 
   const missing = required.filter((name) => !readEnv(name));
+  if (requireSession && !readEnv("TELEGRAM_SCRAPER_SESSION") && (!allowLegacySession || !readEnv("TELEGRAM_SESSION"))) {
+    missing.push(allowLegacySession ? "TELEGRAM_SCRAPER_SESSION (or TELEGRAM_SESSION)" : "TELEGRAM_SCRAPER_SESSION");
+  }
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missing.join(", ")}. Check that .env exists at ${loadedEnv?.envPath ?? ".env"}.`
@@ -123,7 +131,7 @@ export function validateScraperEnv({ requireSupabase = false } = {}) {
     telegram: {
       apiId,
       apiHash: getRequiredEnv("TELEGRAM_API_HASH"),
-      session: getRequiredEnv("TELEGRAM_SESSION"),
+      session: requireSession ? readEnv("TELEGRAM_SCRAPER_SESSION") ?? getRequiredEnv("TELEGRAM_SESSION") : "",
     },
     supabase: {
       url: readEnv("SUPABASE_URL"),

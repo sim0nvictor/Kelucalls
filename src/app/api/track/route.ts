@@ -17,17 +17,19 @@ function extractUsername(raw: string): string | null {
 
 // ── Telegram live lookup (reuses same singleton as telegram-lookup route) ──
 async function lookupTelegram(username: string) {
+  let client: import("telegram").TelegramClient | null = null;
+
   try {
     const { TelegramClient } = await import("telegram");
     const { StringSession } = await import("telegram/sessions/index.js" as string);
 
     const apiId   = Number(process.env.TELEGRAM_API_ID);
     const apiHash = process.env.TELEGRAM_API_HASH ?? "";
-    const session = process.env.TELEGRAM_SESSION ?? "";
+    const session = process.env.TELEGRAM_WEB_SESSION?.trim() || (process.env.TELEGRAM_SESSION ?? "");
 
     if (!apiHash || !session) return null;
 
-    const client = new TelegramClient(
+    client = new TelegramClient(
       new StringSession(session), apiId, apiHash,
       { connectionRetries: 2, requestRetries: 1 }
     );
@@ -52,6 +54,8 @@ async function lookupTelegram(username: string) {
     }
     // If Telegram is unavailable, allow the request through without the quality gate
     return null;
+  } finally {
+    await client?.disconnect();
   }
 }
 

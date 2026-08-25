@@ -13,9 +13,9 @@ const envState = loadScraperEnv(import.meta.url)
 logScraperEnvStatus(envState)
 reportSupabaseEnvFormatting()
 
-const { telegram } = validateScraperEnv()
+const { telegram } = validateScraperEnv({ requireSession: false })
 
-const stringSession = new StringSession(telegram.session)
+const stringSession = new StringSession("")
 
 const client = new TelegramClient(stringSession, telegram.apiId, telegram.apiHash, {
   connectionRetries: 5,
@@ -31,7 +31,7 @@ async function main() {
 
   console.log("\nLOGIN SUCCESSFUL\n")
 
-  console.log("YOUR SESSION STRING:\n")
+  console.log("Set this value as TELEGRAM_SCRAPER_SESSION in .env:\n")
   console.log(client.session.save())
 }
 
