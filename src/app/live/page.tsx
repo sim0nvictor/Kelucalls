@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, DataTableHeader, DataTableRow } from "@/components/ui/data-table";
 import { getLiveCalls, getTrendingTokens, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
 import { getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
-import { formatMultiple, formatPercent } from "@/lib/metrics";
+import { formatMultiple, formatPercent, formatPrice } from "@/lib/metrics";
 import { LiveFeedTicker } from "./live-ticker";
 import { SponsoredTokenCard } from "@/components/sponsored-placement-card";
 import { TokenAvatar } from "@/components/token-avatar";
@@ -16,7 +16,6 @@ import {
   LiveMarketProvider,
   LivePriceCell,
 } from "@/components/tokens/live-market-cells";
-import { formatPrice } from "@/components/tokens/live-market-cells";
 import { siteConfig } from "@/config/site";
 
 export const revalidate = 0;
