@@ -1,0 +1,3 @@
+## Cross-feature theme: "computed once, read everywhere"
+
+Worth remembering as a single unifying idea across almost every feature above: **nothing expensive is ever computed when a page loads.** Smart Scores, trending aggregates, ROI/PnL, milestone flags, and KeluScores are all produced by scheduled background workers and only ever *read* by the website. This is *why* the site can show live-feeling market data without every page load hitting an expensive calculation — the tradeoff is that "live" always means "as of the last worker cycle," not literally real-time, and every feature's freshness is bounded by its own worker's schedule (5 minutes for trending-alerts dispatch, ~30 minutes for KeluScore, 6 hours for AI summaries, etc.).

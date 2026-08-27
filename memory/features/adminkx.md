@@ -1,0 +1,5 @@
+## Admin Control Studio (`/kx-admin`)
+
+**What it is:** The internal dashboard where channels, submissions, ads, moderation reports, and analytics are managed — deliberately at a non-obvious path, not linked from the public site.
+
+**How it works:** A **completely separate auth system** from end-user accounts — a hand-rolled cookie session (not a Supabase Auth session) layered on top of an `admin_users` table membership check. Every admin-gated database table's RLS policy embeds a subquery checking that membership directly, rather than trusting a role claim. Session cookies are built by one single shared function used both at login and during the token-refresh path in `middleware.ts`, specifically to prevent the two write-sites from drifting out of sync on cookie attributes (a documented past source of hard-to-debug auth bugs). Login failures use a specific error-code taxonomy (`invalid_credentials` vs. `not_configured` vs. `not_admin`) rather than one generic message, so a misconfigured deployment is never mistaken for a wrong password.
