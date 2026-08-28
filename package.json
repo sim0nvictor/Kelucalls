@@ -30,6 +30,9 @@
     "worker:alerts": "node workers/intent-alerts.js",
     "worker:trending-alerts": "node workers/trending-alerts.js",
     "worker:summaries": "node workers/intent-summaries.js",
+    "worker:research": "tsx workers/daily-research.ts",
+    "verify:research-generator": "tsx scripts/verify-daily-research-generator.ts",
+    "verify:research-validator": "tsx scripts/verify-daily-research-validator.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.mjs"
