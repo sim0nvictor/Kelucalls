@@ -61,6 +61,9 @@ async function main() {
   const updateState = (state: string, values: Record<string, unknown> = {}) =>
     updateResearchRun(supabase, runId, { state, ...values });
 
+  let snapshotRow: any = null;
+  let snapshotProviders: { succeeded: string[]; failed: string[] } | null = null;
+
   try {
     await updateState("collecting");
     const snapshot = await collectDailyResearchSnapshot(supabase);
@@ -68,15 +71,46 @@ async function main() {
     const providersSucceeded = providerEntries.filter(([, status]) => status.ok).map(([name]) => name);
     const providersFailed = providerEntries.filter(([, status]) => !status.ok).map(([name]) => name);
     const apiCalls = providerEntries.length;
+    
+    snapshotProviders = { succeeded: providersSucceeded, failed: providersFailed };
+
     await updateState("analyzing", {
       api_calls: apiCalls,
       providers_succeeded: providersSucceeded,
       providers_failed: providersFailed
     });
 
-    const snapshotRow = await saveDailyResearchSnapshot(supabase, snapshot);
+    snapshotRow = await saveDailyResearchSnapshot(supabase, snapshot);
+    
+    // Attempt LLM generation, but don't let it discard the collected snapshot
     await updateState("generating");
-    const report = await generateDailyResearchReport(snapshot);
+    let llmError: Error | null = null;
+    let report: any = null;
+    
+    try {
+      report = await generateDailyResearchReport(snapshot);
+    } catch (error) {
+      llmError = error instanceof Error ? error : new Error(String(error));
+      // Log the error but continue to outer catch handler
+      const errorMsg = llmError.message;
+      console.error(JSON.stringify({
+        worker: "daily-research",
+        phase: "generating",
+        state: "snapshot_saved_generation_failed",
+        snapshotId: snapshotRow.id,
+        snapshotDate: snapshotRow.snapshot_date,
+        apiCalls,
+        providersSucceeded: snapshotProviders.succeeded,
+        providersFailed: snapshotProviders.failed,
+        llmError: errorMsg,
+        durationMs: Date.now() - startedAt
+      }, null, 2));
+    }
+    
+    // If LLM failed, propagate the error so it's handled in outer catch
+    if (llmError) {
+      throw llmError;
+    }
 
     await updateState("validating");
     const validation = validateDailyResearchReport(snapshot, report);
@@ -102,8 +136,8 @@ async function main() {
       state: "draft",
       durationMs,
       apiCalls,
-      providersSucceeded,
-      providersFailed,
+      providersSucceeded: snapshotProviders.succeeded,
+      providersFailed: snapshotProviders.failed,
       generatedReportId: reportId,
       validation,
       draftLocation: `/kx-admin/insights?article=${article.id}`,
@@ -113,11 +147,18 @@ async function main() {
     }, null, 2));
   } catch (error) {
     const durationMs = Date.now() - startedAt;
+    
+    // If snapshot was saved, note that in the error message
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const fullErrorMsg = snapshotRow 
+      ? `${errorMsg} (snapshot persisted: ${snapshotRow.id})`
+      : errorMsg;
+    
     await updateResearchRun(supabase, runId, {
       state: "failed",
       completed_at: new Date().toISOString(),
       duration_ms: durationMs,
-      error: error instanceof Error ? error.message.slice(0, 1000) : String(error).slice(0, 1000)
+      error: fullErrorMsg.slice(0, 1000)
     });
     throw error;
   }

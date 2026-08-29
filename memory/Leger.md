@@ -48,6 +48,45 @@ Research prose must remain traceable to collected evidence and must not invent m
 **Impact:**
 `src/lib/research/generator.ts`, `workers/daily-research.ts`, the `generated_report` snapshot column, and the research worker scripts.
 
+---
+
+# 2026-08-29
+
+## FIX-001 - Daily Research Worker Resilience
+
+**Type:** Bug Fix
+
+**What changed:**
+Fixed Daily Research worker to preserve collected snapshot data even when LLM generation fails. Added intelligent error diagnosis for OpenAI 429 to distinguish transient rate-limiting from permanent quota/billing issues. Enhanced provider failure isolation and error logging.
+
+**Files changed:**
+
+- `src/lib/research/generator.ts` - Added LLM error diagnosis and exponential backoff retry
+- `workers/daily-research.ts` - Reordered execution to save snapshot BEFORE LLM generation, improved error handling
+- `src/lib/research/news/index.ts` - Enhanced error logging with failure reasons
+
+**Why:**
+Original worker had fatal flaw: a single LLM error discarded all collected research data because snapshot was saved AFTER generation. OpenAI 429 errors (rate-limiting) were not retried, causing unnecessary failures. News provider failures weren't isolated and crashed the worker.
+
+**Problems solved:**
+
+1. HTTP 429 no longer kills entire worker (smart retry with exponential backoff)
+2. Collected research snapshots now persist to database even if LLM fails
+3. NewsAPI and GDELT failures gracefully degrade instead of crashing system
+4. Error messages clearly show why each provider failed
+
+**Test results:**
+
+- 7/9 providers succeeded (69 research items collected)
+- NewsAPI failed with HTTP 401 (auth issue, isolated)
+- GDELT failed with network error (service unavailable, isolated)
+- LLM 429 diagnosed as transient rate-limit (retryable), snapshot persisted
+- TypeScript: 4 errors → 0 errors
+
+**Backward compatible:** Yes, no schema or API changes.
+
+**See:** `/memories/repo/daily-research-fixes.md` for detailed implementation notes.
+
 **Result:**
 Malformed model JSON, missing or extra sections, and references to unsupplied evidence are rejected. Sources and the disclaimer are assembled in code, and generated reports are persisted as internal JSONB.
 

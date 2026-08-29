@@ -52,7 +52,13 @@ async function fetchProvider(provider: NewsProvider): Promise<{
       };
     } catch (error) {
       lastError = error;
-      console.warn("[research-news] provider failed", { provider: provider.source, attempt });
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const isLastAttempt = attempt === PROVIDER_RETRIES;
+      console.warn("[research-news] provider failed", { 
+        provider: provider.source, 
+        attempt,
+        ...(isLastAttempt && { reason: errorMsg })
+      });
       if (attempt < PROVIDER_RETRIES) {
         await new Promise((resolve) => setTimeout(resolve, PROVIDER_RETRY_DELAY_MS * attempt));
       }

@@ -140,6 +140,156 @@ export function buildDailyResearchGeneratorPayload(
   return { research_snapshot: snapshot, signal_results: signals };
 }
 
+type LLMErrorCategory = "rate_limit" | "quota" | "auth" | "server" | "unknown";
+
+interface LLMErrorDiagnosis {
+  category: LLMErrorCategory;
+  status: number;
+  reason: string;
+  retryable: boolean;
+}
+
+/**
+ * Safely diagnose an LLM error response without exposing sensitive data.
+ * Inspects the status code and response body to determine the real cause.
+ */
+async function diagnoseLLMError(status: number, responseText: string): Promise<LLMErrorDiagnosis> {
+  let body: unknown = null;
+  try {
+    body = JSON.parse(responseText);
+  } catch {
+    // If response is not JSON, classify by status code only
+  }
+
+  const bodyRecord = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : null;
+  const errorObj = bodyRecord?.error;
+  const errorMessage = typeof errorObj === "object" && errorObj !== null 
+    ? (errorObj as Record<string, unknown>)?.message 
+    : null;
+
+  // OpenAI 429: could be rate limiting (retryable) or quota (not retryable)
+  if (status === 429) {
+    const message = typeof errorMessage === "string" ? errorMessage.toLowerCase() : "";
+    const quota = message.includes("quota") || message.includes("insufficient");
+    const retryable = !quota;
+    const reason = quota 
+      ? "quota exhausted or insufficient credits" 
+      : "rate limited (transient)";
+    return { category: quota ? "quota" : "rate_limit", status, reason, retryable };
+  }
+
+  // 401/403: auth issues, never retry
+  if (status === 401 || status === 403) {
+    return { category: "auth", status, reason: "authentication failed", retryable: false };
+  }
+
+  // 5xx: server errors, retryable
+  if (status >= 500) {
+    return { category: "server", status, reason: `server error (${status})`, retryable: true };
+  }
+
+  // Everything else: unknown
+  return { category: "unknown", status, reason: `HTTP ${status}`, retryable: false };
+}
+
+async function generateDailyResearchReportWithRetry(
+  snapshot: DailyResearchSnapshot,
+  apiKey: string,
+  baseUrl: string,
+  model: string,
+  timeoutMs: number,
+  generatedAt: string,
+  fetchImpl: typeof fetch
+): Promise<DailyResearchReport> {
+  const MAX_RETRIES = 3;
+  let lastDiagnosis: LLMErrorDiagnosis | null = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const payload = buildDailyResearchGeneratorPayload(snapshot);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetchImpl(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: JSON.stringify(payload) }
+            ]
+          })
+        });
+
+        if (response.ok) {
+          const responsePayload = (await response.json()) as Record<string, unknown>;
+          const choices = Array.isArray(responsePayload.choices) ? responsePayload.choices : [];
+          const firstChoice = readRecord(choices[0]);
+          const message = readRecord(firstChoice?.message);
+          const content = message?.content;
+          if (typeof content !== "string") throw new Error("Daily research LLM returned no content");
+
+          return {
+            schemaVersion: 1,
+            snapshotDate: snapshot.snapshotDate,
+            collectedAt: snapshot.collectedAt,
+            generatedAt,
+            sections: parseSections(parseJsonContent(content), allowedEvidenceReferences(snapshot)),
+            sources: buildSources(snapshot),
+            financialDisclaimer: FINANCIAL_DISCLAIMER
+          };
+        }
+
+        // Response not ok, diagnose the error
+        const responseText = await response.text();
+        lastDiagnosis = await diagnoseLLMError(response.status, responseText);
+
+        // If not retryable, fail immediately
+        if (!lastDiagnosis.retryable) {
+          throw new Error(
+            `Daily research LLM request failed (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
+          );
+        }
+
+        // Retryable error, log and continue to retry
+        console.warn("[daily-research] LLM request transient error", {
+          attempt,
+          maxRetries: MAX_RETRIES,
+          category: lastDiagnosis.category,
+          status: lastDiagnosis.status
+        });
+
+        if (attempt < MAX_RETRIES) {
+          // Exponential backoff: 1s, 2s, 4s (capped at 30s)
+          const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch (error) {
+      // If this was the last attempt and we have a diagnosis, include it
+      if (attempt === MAX_RETRIES && lastDiagnosis) {
+        throw new Error(
+          `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  // Should not reach here
+  throw new Error("Daily research LLM generation failed");
+}
+
 export async function generateDailyResearchReport(
   snapshot: DailyResearchSnapshot,
   options: DailyResearchGeneratorOptions = {}
@@ -152,47 +302,6 @@ export async function generateDailyResearchReport(
   const model = options.model ?? process.env.DAILY_RESEARCH_MODEL ?? DEFAULT_MODEL;
   const timeoutMs = options.timeoutMs ?? Number(process.env.DAILY_RESEARCH_TIMEOUT_MS ?? REQUEST_TIMEOUT_MS);
   const generatedAt = options.generatedAt ?? new Date().toISOString();
-  const payload = buildDailyResearchGeneratorPayload(snapshot);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    const response = await fetchImpl(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: JSON.stringify(payload) }
-        ]
-      })
-    });
-
-    if (!response.ok) throw new Error(`Daily research LLM request failed with status ${response.status}`);
-    const responsePayload = (await response.json()) as Record<string, unknown>;
-    const choices = Array.isArray(responsePayload.choices) ? responsePayload.choices : [];
-    const firstChoice = readRecord(choices[0]);
-    const message = readRecord(firstChoice?.message);
-    const content = message?.content;
-    if (typeof content !== "string") throw new Error("Daily research LLM returned no content");
-
-    return {
-      schemaVersion: 1,
-      snapshotDate: snapshot.snapshotDate,
-      collectedAt: snapshot.collectedAt,
-      generatedAt,
-      sections: parseSections(parseJsonContent(content), allowedEvidenceReferences(snapshot)),
-      sources: buildSources(snapshot),
-      financialDisclaimer: FINANCIAL_DISCLAIMER
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
+  return generateDailyResearchReportWithRetry(snapshot, apiKey, baseUrl, model, timeoutMs, generatedAt, fetchImpl);
 }
