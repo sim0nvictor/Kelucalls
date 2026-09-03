@@ -37,7 +37,7 @@ export interface RssFeedConfig {
   maxItems: number;
 }
 
-function parsePubDate(value: string, collectedAt: string): string | null {
+function parsePubDate(value: string): string | null {
   if (!value) return null;
   const parsed = Date.parse(value);
   if (Number.isNaN(parsed)) return null;
@@ -63,7 +63,7 @@ export function createRssProvider(config: RssFeedConfig) {
       for (const entry of raw) {
         const title = readString(entry.title);
         const link = readString(entry.link);
-        const publishedAt = parsePubDate(entry.pubDate, collectedAt);
+        const publishedAt = parsePubDate(entry.pubDate);
         if (!title || !link || !publishedAt) continue;
 
         const description = readString(entry.description) ?? null;

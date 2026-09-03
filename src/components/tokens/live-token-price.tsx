@@ -58,7 +58,7 @@ export function LiveTokenPrice({
 }: LiveTokenPriceProps) {
   const [snapshot, setSnapshot] = useState<TokenMarketSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [now, setNow] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const previousPriceRef = useRef<number | null>(null);
   const [pulse, setPulse] = useState<"up" | "down" | null>(null);
 
@@ -99,17 +99,19 @@ export function LiveTokenPrice({
   useEffect(() => {
     if (!address && !symbol) return;
 
-    void load();
+    const initialTimer = window.setTimeout(() => void load(), 0);
     const timer = window.setInterval(() => {
       if (typeof document !== "undefined" && document.hidden) return;
       void load();
     }, refreshMs);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
   }, [address, symbol, load, refreshMs]);
 
   useEffect(() => {
-    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -119,7 +121,7 @@ export function LiveTokenPrice({
   const isLive = Boolean(snapshot && snapshot.priceUsd !== null);
 
   const secondsAgo =
-    now === null || !snapshot
+    !snapshot
       ? null
       : Math.max(0, Math.round((now - new Date(snapshot.fetchedAt).getTime()) / 1000));
 
