@@ -207,7 +207,7 @@ export default async function TagPage({ params, searchParams }: PageProps) {
           {tag.name}
         </h1>
         <p className="mt-4 text-sm text-slate-500">
-          {total} article{total !== 1 ? "s" : ""} tagged with "{tag.name}"
+          {total} article{total !== 1 ? "s" : ""} tagged with &quot;{tag.name}&quot;
         </p>
       </header>
 

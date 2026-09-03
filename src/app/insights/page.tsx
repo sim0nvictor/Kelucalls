@@ -304,7 +304,7 @@ export default async function InsightsPage() {
           <BookOpen className="mx-auto mb-4 size-16 text-slate-600" />
           <h1 className="text-2xl font-semibold text-white">Insights Coming Soon</h1>
           <p className="mt-2 text-slate-400">
-            We're building high-quality crypto intelligence content for you.
+            We are building high-quality crypto intelligence content for you.
           </p>
         </div>
       </div>

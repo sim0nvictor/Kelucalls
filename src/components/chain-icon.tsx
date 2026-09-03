@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 
 import {
   chainBrandColor,
@@ -12,6 +12,7 @@ import {
 // Re-exported for convenience so existing client imports keep working.
 export { chainBrandColor, chainIconUrl, chainLabel, normalizeChainKey, resolveChainMeta } from "@/lib/chains";
 export type { ChainMeta };
+export default ChainIcon;
 
 type ChainIconProps = {
   chain: string | null | undefined;
@@ -39,23 +40,20 @@ export function ChainIcon({
   const iconUrl = chainIconUrl(chain);
   const label = chainLabel(chain);
   const color = chainBrandColor(chain);
-  const [broken, setBroken] = useState(false);
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
 
-  // A row can be re-used for a different chain while scrolling a virtual list.
-  useEffect(() => {
-    setBroken(false);
-  }, [iconUrl]);
 
-  const showImage = iconUrl !== null && !broken;
+  const showImage = iconUrl !== null && iconUrl !== brokenUrl;
 
   const icon = showImage ? (
+    // eslint-disable-next-line @next/next/no-img-element -- Dynamic chain icon hosts are not known to Next image optimization.
     <img
       src={iconUrl}
       alt={label}
       width={size}
       height={size}
       loading="lazy"
-      onError={() => setBroken(true)}
+      onError={() => setBrokenUrl(iconUrl)}
       className="shrink-0 rounded-full"
       style={{ width: size, height: size }}
     />
@@ -86,5 +84,3 @@ export function ChainIcon({
     </span>
   );
 }
-
-export default ChainIcon;

@@ -53,11 +53,6 @@ const NARRATIVE_CURVE = [
 const MIN_NEWS_MENTIONS = 2;
 const MIN_TRENDING_PRESENCE = 1;
 const MIN_GROWTH_RATIO = 1.5;
-
-function safeNumber(value: number | null | undefined): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 const NARRATIVE_ALIASES: Record<string, string[]> = {
   BTC: ["BTC", "BITCOIN"],
   ETH: ["ETH", "ETHEREUM"],

@@ -236,11 +236,14 @@ export function TokenMarket({
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [queryKey, refresh]);
 
-  useEffect(() => {
+useEffect(() => {
+  const timer = window.setInterval(() => {
     setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
-  }, []);
+  }, 1_000);
+
+  return () => window.clearInterval(timer);
+}, []);
+
 
   useEffect(
     () => () => {
