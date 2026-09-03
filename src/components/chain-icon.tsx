@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 import {
@@ -25,9 +26,9 @@ type ChainIconProps = {
 /**
  * Chain logo with a coloured-initial fallback.
  *
- * Uses a plain <img> rather than next/image: DexScreener occasionally adds new
- * chain slugs, and a broken remote image should degrade to the initial instead
- * of throwing during optimisation.
+ * Uses an unoptimized Next image because DexScreener can add chain slugs at
+ * runtime. Failed remote images degrade to the initial without requiring a
+ * static remote-image allowlist.
  */
 export function ChainIcon({
   chain,
@@ -43,12 +44,12 @@ export function ChainIcon({
   const showImage = iconUrl !== null && iconUrl !== brokenUrl;
 
   const icon = showImage ? (
-    <img
+    <Image
       src={iconUrl}
       alt={label}
       width={size}
       height={size}
-      loading="lazy"
+      unoptimized
       onError={() => setBrokenUrl(iconUrl)}
       className="shrink-0 rounded-full"
       style={{ width: size, height: size }}
