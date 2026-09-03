@@ -99,30 +99,38 @@ export function LiveTokenPrice({
   useEffect(() => {
     if (!address && !symbol) return;
 
-    void load();
+    const initialLoad = window.setTimeout(() => {
+      void load();
+    }, 0);
     const timer = window.setInterval(() => {
       if (typeof document !== "undefined" && document.hidden) return;
       void load();
     }, refreshMs);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [address, symbol, load, refreshMs]);
 
   useEffect(() => {
+    const timer = window.setInterval(() => {
     setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
-  }, []);
+  }, 1_000);
+
+  return () => window.clearInterval(timer);
+}, []);
 
   const priceUsd = snapshot?.priceUsd ?? fallbackPriceUsd;
   const marketCapUsd = snapshot?.marketCapUsd ?? fallbackMarketCapUsd;
   const isLive = Boolean(snapshot && snapshot.priceUsd !== null);
 
-  const secondsAgo =
-    now === null || !snapshot
-      ? null
-      : Math.max(0, Math.round((now - new Date(snapshot.fetchedAt).getTime()) / 1000));
-
+  const secondsAgo = !snapshot || now === null
+  ? null
+  : Math.max(
+      0,
+      Math.round((now - new Date(snapshot.fetchedAt).getTime()) / 1000)
+    );
   return (
     <div className="min-w-[15rem] rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-right">
       <div className="flex items-center justify-end gap-2 text-xs uppercase tracking-widest text-slate-500">

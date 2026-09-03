@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Check,
@@ -77,19 +77,22 @@ const SHARE_TARGETS: ShareTarget[] = [
 const actionClass =
   "inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-white/12 bg-white/6 px-4 text-xs font-medium text-white transition-all duration-300 outline-none hover:border-cyan-400/40 hover:bg-white/10";
 
-export function ArticleShare({ title, url, summary }: ArticleShareProps) {
-  const [shareUrl, setShareUrl] = useState(url);
-  const [copied, setCopied] = useState(false);
-  const [canNativeShare, setCanNativeShare] = useState(false);
+const subscribeToBrowser = () => () => {};
+const getBrowserUrl = () => `${window.location.origin}${window.location.pathname}`;
+const getNativeShareSupport = () => typeof navigator.share === "function";
 
-  // Prefer the real browser URL once hydrated (handles preview deploys and custom domains).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setShareUrl(`${window.location.origin}${window.location.pathname}`);
-    setCanNativeShare(
-      typeof navigator !== "undefined" && typeof navigator.share === "function"
-    );
-  }, []);
+export function ArticleShare({ title, url, summary }: ArticleShareProps) {
+  const shareUrl = useSyncExternalStore(
+    subscribeToBrowser,
+    getBrowserUrl,
+    () => url
+  );
+  const [copied, setCopied] = useState(false);
+  const canNativeShare = useSyncExternalStore(
+    subscribeToBrowser,
+    getNativeShareSupport,
+    () => false
+  );
 
   useEffect(() => {
     if (!copied) return;
