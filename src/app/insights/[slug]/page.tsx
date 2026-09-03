@@ -107,7 +107,7 @@ function extractHeadings(content: string) {
 
 function processContent(content: string): string {
   // Simple markdown processing
-  let processed = content
+  const processed = content
     // Code blocks
     .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-slate-900 rounded-xl p-4 overflow-x-auto my-4"><code class="text-sm text-slate-300">$2</code></pre>')
     // Inline code

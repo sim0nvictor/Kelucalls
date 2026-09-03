@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   chainBrandColor,
@@ -39,14 +39,8 @@ export function ChainIcon({
   const iconUrl = chainIconUrl(chain);
   const label = chainLabel(chain);
   const color = chainBrandColor(chain);
-  const [broken, setBroken] = useState(false);
-
-  // A row can be re-used for a different chain while scrolling a virtual list.
-  useEffect(() => {
-    setBroken(false);
-  }, [iconUrl]);
-
-  const showImage = iconUrl !== null && !broken;
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const showImage = iconUrl !== null && iconUrl !== brokenUrl;
 
   const icon = showImage ? (
     <img
@@ -55,7 +49,7 @@ export function ChainIcon({
       width={size}
       height={size}
       loading="lazy"
-      onError={() => setBroken(true)}
+      onError={() => setBrokenUrl(iconUrl)}
       className="shrink-0 rounded-full"
       style={{ width: size, height: size }}
     />

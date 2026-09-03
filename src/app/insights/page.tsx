@@ -304,7 +304,7 @@ export default async function InsightsPage() {
           <BookOpen className="mx-auto mb-4 size-16 text-slate-600" />
           <h1 className="text-2xl font-semibold text-white">Insights Coming Soon</h1>
           <p className="mt-2 text-slate-400">
-            We're building high-quality crypto intelligence content for you.
+            We&apos;re building high-quality crypto intelligence content for you.
           </p>
         </div>
       </div>
@@ -365,7 +365,7 @@ export default async function InsightsPage() {
       {/* Editor's Picks */}
       {editorPicks.length > 0 && (
         <section className="mb-12">
-          <SectionHeader title="Editor's Picks" icon={Star} color="#a855f7" />
+          <SectionHeader title="Editor’s Picks" icon={Star} color="#a855f7" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {editorPicks.map((article) => (
               <ArticleCard key={article.id} article={article} />

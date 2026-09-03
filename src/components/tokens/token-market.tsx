@@ -139,7 +139,7 @@ export function TokenMarket({
   const [sortKey, setSortKey] = useState<SortKey>("marketCap");
   const [sortDesc, setSortDesc] = useState(true);
   const [flash, setFlash] = useState<Record<string, "up" | "down">>({});
-  const [now, setNow] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const snapshotsRef = useRef<SnapshotMap>(initialSnapshots);
   const flashTimerRef = useRef<number | null>(null);
@@ -237,7 +237,6 @@ export function TokenMarket({
   }, [queryKey, refresh]);
 
   useEffect(() => {
-    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -324,8 +323,10 @@ export function TokenMarket({
   const combinedMarketCap = rows.reduce((total, row) => total + (row.marketCapUsd ?? 0), 0);
   const combined24hVolume = rows.reduce((total, row) => total + (row.volume24hUsd ?? 0), 0);
 
-  const secondsAgo =
-    now === null ? null : Math.max(0, Math.round((now - new Date(fetchedAt).getTime()) / 1000));
+  const secondsAgo = Math.max(
+    0,
+    Math.round((now - new Date(fetchedAt).getTime()) / 1000)
+  );
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) {
