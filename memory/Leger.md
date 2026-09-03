@@ -33,6 +33,29 @@ incidents/
 
 ---
 
+# 2026-08-31
+
+## FIX-004 - Daily Research Worker Report Type Regression
+
+**Type:** Fix
+
+**What changed:**
+Fixed `workers/daily-research.ts` to type the awaited LLM result as `DailyResearchReport` and added an explicit no-report guard before validation.
+
+**Why:**
+The worker used `ReturnType<typeof generateDailyResearchReport>`, which is the Promise type for the async function, causing `npm run typecheck` to fail and obscuring the downstream report contract.
+
+**Result:**
+Daily Research worker typechecking is restored without changing the one-shot cron workflow, snapshot preservation, validation gate, or draft article creation behavior.
+
+**Related:**
+
+- `memory/fixes/FIX-004.md`
+- `memory/features/daily-research.md`
+- `workers/daily-research.ts`
+
+---
+
 # 2026-08-28
 
 ## FEATURE-007 - Daily Research Generator

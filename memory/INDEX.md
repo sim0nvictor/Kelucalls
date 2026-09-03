@@ -93,6 +93,7 @@ Documents bugs, crashes, regressions, root causes, and permanent solutions.
 | ID      | Document           | Description                                  |
 | ------- | ------------------ | -------------------------------------------- |
 | FIX-001 | `fixes/FIX-001.md` | Dashboard calls query and Supabase RLS issue |
+| FIX-004 | `fixes/FIX-004.md` | Daily Research worker awaited report type regression |
 
 > **Important:** Always search this category before fixing a bug.
 

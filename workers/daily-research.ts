@@ -12,6 +12,7 @@ import {
 import { generateDailyResearchReport } from "../src/lib/research/generator";
 import { createDailyResearchArticleDraft } from "../src/lib/research/article";
 import { validateDailyResearchReport } from "../src/lib/research/validator";
+import type { DailyResearchReport } from "../src/lib/research/types";
 import {
   claimResearchRun,
   notifyResearchAdmins,
@@ -61,7 +62,7 @@ async function main() {
   const updateState = (state: string, values: Record<string, unknown> = {}) =>
     updateResearchRun(supabase, runId, { state, ...values });
 
-  let snapshotRow: any = null;
+  let snapshotRow: { id: string; snapshot_date: string } | null = null;
   let snapshotProviders: { succeeded: string[]; failed: string[] } | null = null;
 
   try {
@@ -85,7 +86,7 @@ async function main() {
     // Attempt LLM generation, but don't let it discard the collected snapshot
     await updateState("generating");
     let llmError: Error | null = null;
-    let report: any = null;
+    let report: DailyResearchReport | null = null;
     
     try {
       report = await generateDailyResearchReport(snapshot);
@@ -110,6 +111,9 @@ async function main() {
     // If LLM failed, propagate the error so it's handled in outer catch
     if (llmError) {
       throw llmError;
+    }
+    if (!report) {
+      throw new Error("Daily research LLM generation returned no report");
     }
 
     await updateState("validating");
