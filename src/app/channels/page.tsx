@@ -28,7 +28,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
   const rankingMode = rankingModes.includes(ranking as RankingMode)
     ? (ranking as RankingMode)
     : "smart";
-  const channels = await getLeaderboard(rankingMode, 24);
+  const channels = await getLeaderboard(rankingMode);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">

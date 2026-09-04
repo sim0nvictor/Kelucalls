@@ -23,7 +23,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
     : "smart";
 
   const [channels, sponsoredPlacements] = await Promise.all([
-    getLeaderboard(rankingMode, 24),
+    getLeaderboard(rankingMode),
     getSponsoredPlacements(3),
   ]);
 

@@ -243,7 +243,7 @@ function sortChannels(channels: ChannelSummary[], rankingMode: RankingMode) {
 // Queries
 // ---------------------------------------------------------------------------
  
-export async function getLeaderboard(rankingMode: RankingMode = "smart", limit = 12) {
+export async function getLeaderboard(rankingMode: RankingMode = "smart", limit?: number) {
   const rows = await withSupabase(async (supabase) => {
     const { data, error } = await supabase
       .from("channels")

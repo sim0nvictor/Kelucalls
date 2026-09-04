@@ -235,7 +235,7 @@ Improve table organization and responsive behavior without changing the underlyi
 ## BL-008 — Fix `npm run lint` Errors
 
 **Priority:** P0  
-**Status:** pending
+**Status:** done
 
 ### Problem
 `npm run lint` currently reports **multiple errors**, mostly from the admin area.
@@ -299,4 +299,4 @@ For every item:
 | BL-005 | Channel & Token avatars/logos | pending |
 | BL-006 | Token chart performance | pending |
 | BL-007 | Table/mobile organization | pending |
-| BL-008 | npm lint errors | pending |
+| BL-008 | npm lint errors | done |
