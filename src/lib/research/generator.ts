@@ -142,6 +142,28 @@ export function buildDailyResearchGeneratorPayload(
 
 type LLMErrorCategory = "rate_limit" | "quota" | "auth" | "server" | "unknown";
 
+export class DailyResearchLLMError extends Error {
+  category: LLMErrorCategory;
+  status: number;
+  retryable: boolean;
+  retryAfterSeconds: number | null;
+
+  constructor(args: {
+    message: string;
+    category: LLMErrorCategory;
+    status: number;
+    retryable: boolean;
+    retryAfterSeconds?: number | null;
+  }) {
+    super(args.message);
+    this.name = "DailyResearchLLMError";
+    this.category = args.category;
+    this.status = args.status;
+    this.retryable = args.retryable;
+    this.retryAfterSeconds = args.retryAfterSeconds ?? null;
+  }
+}
+
 interface LLMErrorDiagnosis {
   category: LLMErrorCategory;
   status: number;
@@ -163,8 +185,8 @@ async function diagnoseLLMError(status: number, responseText: string): Promise<L
 
   const bodyRecord = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : null;
   const errorObj = bodyRecord?.error;
-  const errorMessage = typeof errorObj === "object" && errorObj !== null 
-    ? (errorObj as Record<string, unknown>)?.message 
+  const errorMessage = typeof errorObj === "object" && errorObj !== null
+    ? (errorObj as Record<string, unknown>)?.message
     : null;
 
   // OpenAI 429: could be rate limiting (retryable) or quota (not retryable)
@@ -172,8 +194,8 @@ async function diagnoseLLMError(status: number, responseText: string): Promise<L
     const message = typeof errorMessage === "string" ? errorMessage.toLowerCase() : "";
     const quota = message.includes("quota") || message.includes("insufficient");
     const retryable = !quota;
-    const reason = quota 
-      ? "quota exhausted or insufficient credits" 
+    const reason = quota
+      ? "quota exhausted or insufficient credits"
       : "rate limited (transient)";
     return { category: quota ? "quota" : "rate_limit", status, reason, retryable };
   }
@@ -203,90 +225,100 @@ async function generateDailyResearchReportWithRetry(
 ): Promise<DailyResearchReport> {
   const MAX_RETRIES = 3;
   let lastDiagnosis: LLMErrorDiagnosis | null = null;
+  let lastRetryAfterSeconds: number | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const payload = buildDailyResearchGeneratorPayload(snapshot);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-      const payload = buildDailyResearchGeneratorPayload(snapshot);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetchImpl(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: JSON.stringify(payload) }
+          ]
+        })
+      });
 
-      try {
-        const response = await fetchImpl(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          signal: controller.signal,
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model,
-            temperature: 0,
-            response_format: { type: "json_object" },
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: JSON.stringify(payload) }
-            ]
-          })
-        });
+      if (response.ok) {
+        const responsePayload = (await response.json()) as Record<string, unknown>;
+        const choices = Array.isArray(responsePayload.choices) ? responsePayload.choices : [];
+        const firstChoice = readRecord(choices[0]);
+        const message = readRecord(firstChoice?.message);
+        const content = message?.content;
+        if (typeof content !== "string") throw new Error("Daily research LLM returned no content");
 
-        if (response.ok) {
-          const responsePayload = (await response.json()) as Record<string, unknown>;
-          const choices = Array.isArray(responsePayload.choices) ? responsePayload.choices : [];
-          const firstChoice = readRecord(choices[0]);
-          const message = readRecord(firstChoice?.message);
-          const content = message?.content;
-          if (typeof content !== "string") throw new Error("Daily research LLM returned no content");
+        return {
+          schemaVersion: 1,
+          snapshotDate: snapshot.snapshotDate,
+          collectedAt: snapshot.collectedAt,
+          generatedAt,
+          sections: parseSections(parseJsonContent(content), allowedEvidenceReferences(snapshot)),
+          sources: buildSources(snapshot),
+          financialDisclaimer: FINANCIAL_DISCLAIMER
+        };
+      }
 
-          return {
-            schemaVersion: 1,
-            snapshotDate: snapshot.snapshotDate,
-            collectedAt: snapshot.collectedAt,
-            generatedAt,
-            sections: parseSections(parseJsonContent(content), allowedEvidenceReferences(snapshot)),
-            sources: buildSources(snapshot),
-            financialDisclaimer: FINANCIAL_DISCLAIMER
-          };
-        }
+      const responseText = await response.text();
+      lastDiagnosis = await diagnoseLLMError(response.status, responseText);
 
-        // Response not ok, diagnose the error
-        const responseText = await response.text();
-        lastDiagnosis = await diagnoseLLMError(response.status, responseText);
+      const retryAfterHeader = response.headers.get("retry-after");
+      const parsedRetryAfter = retryAfterHeader ? Number(retryAfterHeader) : null;
+      lastRetryAfterSeconds = Number.isFinite(parsedRetryAfter as number)
+        ? (parsedRetryAfter as number)
+        : null;
 
-        // If not retryable, fail immediately
-        if (!lastDiagnosis.retryable) {
-          throw new Error(
-            `Daily research LLM request failed (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
-          );
-        }
-
-        // Retryable error, log and continue to retry
-        console.warn("[daily-research] LLM request transient error", {
-          attempt,
-          maxRetries: MAX_RETRIES,
+      if (!lastDiagnosis.retryable) {
+        throw new DailyResearchLLMError({
+          message: `Daily research LLM request failed (${lastDiagnosis.category}): ${lastDiagnosis.reason}`,
           category: lastDiagnosis.category,
-          status: lastDiagnosis.status
+          status: lastDiagnosis.status,
+          retryable: false,
+          retryAfterSeconds: lastRetryAfterSeconds
         });
+      }
 
-        if (attempt < MAX_RETRIES) {
-          // Exponential backoff: 1s, 2s, 4s (capped at 30s)
-          const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-      } finally {
-        clearTimeout(timeout);
+      console.warn("[daily-research] LLM request transient error", {
+        attempt,
+        maxRetries: MAX_RETRIES,
+        category: lastDiagnosis.category,
+        status: lastDiagnosis.status
+      });
+
+      if (attempt < MAX_RETRIES) {
+        const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
       }
+
+      // If we exhausted local retries, throw a typed, retryable error so the caller can defer.
+      throw new DailyResearchLLMError({
+        message: `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`,
+        category: lastDiagnosis.category,
+        status: lastDiagnosis.status,
+        retryable: true,
+        retryAfterSeconds: lastRetryAfterSeconds
+      });
     } catch (error) {
-      // If this was the last attempt and we have a diagnosis, include it
-      if (attempt === MAX_RETRIES && lastDiagnosis) {
-        throw new Error(
-          `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
-        );
-      }
+      // Propagate already-typed errors (worker uses these to decide defer vs fail).
+      if (error instanceof DailyResearchLLMError) throw error;
       throw error;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
-  // Should not reach here
   throw new Error("Daily research LLM generation failed");
 }
 
