@@ -225,6 +225,28 @@ export function buildDailyResearchGeneratorPayload(
 
 type LLMErrorCategory = "rate_limit" | "quota" | "auth" | "server" | "unknown";
 
+export class DailyResearchLLMError extends Error {
+  category: LLMErrorCategory;
+  status: number;
+  retryable: boolean;
+  retryAfterSeconds: number | null;
+
+  constructor(args: {
+    message: string;
+    category: LLMErrorCategory;
+    status: number;
+    retryable: boolean;
+    retryAfterSeconds?: number | null;
+  }) {
+    super(args.message);
+    this.name = "DailyResearchLLMError";
+    this.category = args.category;
+    this.status = args.status;
+    this.retryable = args.retryable;
+    this.retryAfterSeconds = args.retryAfterSeconds ?? null;
+  }
+}
+
 interface LLMErrorDiagnosis {
   category: LLMErrorCategory;
   status: number;
@@ -246,8 +268,8 @@ async function diagnoseLLMError(status: number, responseText: string): Promise<L
 
   const bodyRecord = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : null;
   const errorObj = bodyRecord?.error;
-  const errorMessage = typeof errorObj === "object" && errorObj !== null 
-    ? (errorObj as Record<string, unknown>)?.message 
+  const errorMessage = typeof errorObj === "object" && errorObj !== null
+    ? (errorObj as Record<string, unknown>)?.message
     : null;
 
   // Gemini 429: could be rate limiting (retryable) or quota (not retryable)
@@ -255,8 +277,8 @@ async function diagnoseLLMError(status: number, responseText: string): Promise<L
     const message = typeof errorMessage === "string" ? errorMessage.toLowerCase() : "";
     const quota = message.includes("quota") || message.includes("insufficient");
     const retryable = !quota;
-    const reason = quota 
-      ? "quota exhausted or insufficient credits" 
+    const reason = quota
+      ? "quota exhausted or insufficient credits"
       : "rate limited (transient)";
     return { category: quota ? "quota" : "rate_limit", status, reason, retryable };
   }
@@ -345,9 +367,12 @@ async function generateDailyResearchReportWithRetry(
         lastDiagnosis = await diagnoseLLMError(response.status, responseText);
 
         if (!lastDiagnosis.retryable) {
-          throw new Error(
-            `Daily research LLM request failed (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
-          );
+          throw new DailyResearchLLMError({
+            message: `Daily research LLM request failed (${lastDiagnosis.category}): ${lastDiagnosis.reason}`,
+            category: lastDiagnosis.category,
+            status: lastDiagnosis.status,
+            retryable: false
+          });
         }
 
         console.warn("[daily-research] LLM request transient error", {
@@ -365,25 +390,37 @@ async function generateDailyResearchReportWithRetry(
             ? Math.max(0, retryAfterSeconds * 1000)
             : fallbackDelayMs;
           const delayMs = Math.max(retryAfterDelayMs, fallbackDelayMs);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       } finally {
         clearTimeout(timeout);
       }
     } catch (error) {
-      if (attempt === MAX_RETRIES && lastDiagnosis) {
-        throw new Error(
-          `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
-        );
+      if (error instanceof DailyResearchLLMError) {
+        if (attempt === MAX_RETRIES) throw error;
+        continue;
       }
+
+      if (attempt === MAX_RETRIES && lastDiagnosis) {
+        throw new DailyResearchLLMError({
+          message: `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`,
+          category: lastDiagnosis.category,
+          status: lastDiagnosis.status,
+          retryable: lastDiagnosis.retryable
+        });
+      }
+
       throw error;
     }
   }
 
   if (lastDiagnosis) {
-    throw new Error(
-      `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
-    );
+    throw new DailyResearchLLMError({
+      message: `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`,
+      category: lastDiagnosis.category,
+      status: lastDiagnosis.status,
+      retryable: lastDiagnosis.retryable
+    });
   }
 
   throw new Error("Daily research LLM generation failed");

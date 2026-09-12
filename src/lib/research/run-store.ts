@@ -7,6 +7,7 @@ export type ResearchRunState =
   | "generating"
   | "validating"
   | "draft"
+  | "deferred"
   | "failed";
 
 type ResearchRunRow = {
@@ -25,6 +26,10 @@ type ResearchRunRow = {
   article_id: string | null;
   validation_result: Record<string, unknown>;
   error: string | null;
+  snapshot_id?: string | null;
+  snapshot_date?: string | null;
+  next_retry_at?: string | null;
+  llm_error?: string | null;
 };
 
 const ACTIVE_STATES = new Set<ResearchRunState>([
