@@ -5,8 +5,8 @@
 > **Agent rule:** Do not guess requirements. Inspect the existing implementation first. If the expected behavior cannot be determined from this backlog and the project, stop and ask for clarification before making behavioral or architectural changes.
 >
 > Keep changes scoped to the current backlog item. Do not rewrite unrelated working functionality.
->Keep records of detected error that's is important.
->Always add to the memory important and necessary changes fixes
+> Keep records of detected error that's is important.
+> Always add to the memory important and necessary changes fixes
 
 ## BL-001 — Intent Communities
 
@@ -14,17 +14,22 @@
 **Status:** pending
 
 ### Goal
+
 Show an **Intent Score** for communities.
 
 ### Current situation
+
 The Intent Score plan has not yet been applied because KeluCalls needs community data from:
+
 - X API
 - Discord
 
 ### Expected outcome
+
 Once the required data sources are available, KeluCalls should collect community data and apply/display an Intent Score for communities.
 
 ### Acceptance criteria
+
 - [ ] X API access is available before X community integration.
 - [ ] Discord data access/integration is available before Discord integration.
 - [ ] Community data can be collected.
@@ -37,12 +42,14 @@ Once the required data sources are available, KeluCalls should collect community
 ## BL-002 — Automated Insight Worker
 
 **Priority:** P0  
-**Status:** pending
+**Status:** in-progress
 
 ### Goal
+
 Create an automated worker that produces a **daily Insight article** for the Insight page.
 
 ### Data sources
+
 - CoinGecko
 - Fear & Greed
 - NewsAPI
@@ -67,9 +74,15 @@ Insight Page
 ```
 
 ### Expected outcome
+
 A daily article is automatically generated from fresh market/news data and KeluCalls data.
 
+### Current technical diagnosis
+
+The worker is collecting partial data and isolating provider failures correctly, but the remaining blocker is a research contract issue: the generator and validator have drifted on evidence-path normalization and the validator is still over-rejecting incidental numeric fragments. The pipeline is therefore not yet considered complete, even though the GDELT 429 failure is being handled as degraded data rather than a full worker failure.
+
 ### Acceptance criteria
+
 - [ ] Worker runs through its scheduled/daily path.
 - [ ] CoinGecko data is collected when available.
 - [ ] Fear & Greed data is collected when available.
@@ -88,18 +101,22 @@ A daily article is automatically generated from fresh market/news data and KeluC
 ## BL-003 — Channel Page Only Shows 24 Channels
 
 **Priority:** P1  
-**Status:** pending
+**Status:** done
 
 ### Problem
+
 The database has **150+ active channels**, but the Channel Page table shows only the **top 24**. Channels ranked below 24 are not displayed.
 
 ### Suspected cause
+
 This appears to be a UI/display limit, but the actual cause must be verified before changing it.
 
 ### Expected outcome
+
 Users should be able to access the full active channel inventory.
 
 ### Acceptance criteria
+
 - [ ] Determine where the 24-channel limit originates.
 - [ ] Channels below rank 24 are accessible.
 - [ ] Existing ranking/sorting still works.
@@ -114,26 +131,32 @@ Users should be able to access the full active channel inventory.
 **Status:** pending
 
 ### Problem
+
 The current ranking produces very large Average ROI gaps.
 
 Current example:
+
 - #1: approximately **3500%**
 - #2: approximately **1000%**
 - #3: approximately **300%**
 - Below that: approximately **100%**
 
 ### Important understanding
+
 This is **not currently considered a bug**. The result appears to come from the existing formula.
 
 The concern is that extreme ROI values create very large gaps in the ranking.
 
 ### Planned improvement
+
 Investigate adding a **median-based component** to reduce the influence of extreme values.
 
 ### Constraints
+
 Do not blindly replace the current formula.
 
 First:
+
 1. Inspect the current ROI calculation.
 2. Inspect the ranking formula.
 3. Determine whether the issue is Average ROI, ranking score, or both.
@@ -142,6 +165,7 @@ First:
 6. Only change the formula if the result better represents channel performance.
 
 ### Acceptance criteria
+
 - [ ] Current ROI calculation is documented.
 - [ ] Current ranking formula is documented.
 - [ ] Extreme-value behavior is measured.
@@ -158,24 +182,30 @@ First:
 **Status:** pending
 
 ### Problem
+
 Channel avatars and token logos are inconsistent.
 
 ### Channels
+
 The channel avatar worker runs, but some channels still fail to fetch their avatars.
 
 ### Tokens
+
 Token avatars/logos are currently fetched directly from **DexScreener**. A **logo backfill worker** is also used to populate missing token logos.
 
 ### Goal
+
 Make channel avatars and token logos as consistent and reliable as possible.
 
 ### Expected outcome
+
 - Channels get their correct avatar whenever available.
 - Tokens get a reliable logo whenever available.
 - Missing images have controlled fallbacks.
 - Backfill processes can repair missing images.
 
 ### Acceptance criteria
+
 - [ ] Identify why channel avatar fetches fail.
 - [ ] Improve handling/backfill of failed channel avatar fetches where appropriate.
 - [ ] Document the token logo and backfill flow.
@@ -192,12 +222,15 @@ Make channel avatars and token logos as consistent and reliable as possible.
 **Status:** pending
 
 ### Problem
+
 The token chart currently loads slowly.
 
 ### Goal
+
 Improve token chart loading/perceived performance while preserving data correctness.
 
 ### Acceptance criteria
+
 - [ ] Measure the current chart loading path.
 - [ ] Identify the actual source of latency.
 - [ ] Determine whether the bottleneck is the external data source, KeluCalls API layer, rendering, caching, or another component.
@@ -215,14 +248,17 @@ Improve token chart loading/perceived performance while preserving data correctn
 **Status:** pending
 
 ### Problem
+
 Table components need better organization, especially on mobile. Some elements overlap.
 
 This is **not a severe problem**, but the UI should feel more modern and polished.
 
 ### Goal
+
 Improve table organization and responsive behavior without changing the underlying functionality.
 
 ### Acceptance criteria
+
 - [ ] No important content overlaps on supported mobile widths.
 - [ ] Tables remain usable on small screens.
 - [ ] Desktop layout remains functional.
@@ -238,12 +274,15 @@ Improve table organization and responsive behavior without changing the underlyi
 **Status:** done
 
 ### Problem
+
 `npm run lint` currently reports **multiple errors**, mostly from the admin area.
 
 ### Goal
+
 Return the project to a clean lint state.
 
 ### Acceptance criteria
+
 - [ ] Run `npm run lint`.
 - [ ] Identify all current errors.
 - [ ] Fix the underlying issues.
@@ -290,13 +329,13 @@ For every item:
 
 # Progress Log
 
-| ID | Item | Status |
-|---|---|---|
-| BL-001 | Intent Communities | pending |
-| BL-002 | Automated Insight Worker | pending |
-| BL-003 | Channel Page 24-channel limit | pending |
+| ID     | Item                          | Status  |
+| ------ | ----------------------------- | ------- |
+| BL-001 | Intent Communities            | pending |
+| BL-002 | Automated Insight Worker      | pending |
+| BL-003 | Channel Page 24-channel limit | done    |
 | BL-004 | Channel Average ROI / ranking | pending |
 | BL-005 | Channel & Token avatars/logos | pending |
-| BL-006 | Token chart performance | pending |
-| BL-007 | Table/mobile organization | pending |
-| BL-008 | npm lint errors | done |
+| BL-006 | Token chart performance       | pending |
+| BL-007 | Table/mobile organization     | pending |
+| BL-008 | npm lint errors               | done    |

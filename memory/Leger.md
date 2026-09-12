@@ -33,6 +33,28 @@ incidents/
 
 ---
 
+# 2026-09-12
+
+## FIX-005 - Daily Research Validation Contract Drift
+
+**Type:** Fix / Diagnosis
+
+**What changed:** Diagnosed the live worker failure as a contract mismatch between the generator's evidence references and the validator's canonical snapshot paths, plus a brittle numeric validator that treated incidental or malformed numeric fragments as factual claims. The generator and validator were not using a single authoritative evidence representation, and the validator was also too eager to reject numeric prose that lacked a supported snapshot fact.
+
+**Why:** The real problem was not a single bad regex or one stale path. The evidence contract drift meant the same signal could be emitted as `signals[0]`, `signals.0`, `signal_results.signals.0`, or `research_snapshot.signals.*`, while the validator only recognized a subset of those forms. In addition, the validator checked every numeric token in prose instead of only source-backed factual claims, producing false positives such as `2.0` and `$183.50`.
+
+**Result:** The pipeline is narrowed to a validation-contract issue: the data collection layer is mostly resilient and the GDELT 429 failure is isolated, but the LLM output still needs to remain strictly grounded to the research snapshot and signal block. No automatic publishing was added, and provider degradation remains intentionally isolated.
+
+**Related:**
+
+- `src/lib/research/generator.ts`
+- `src/lib/research/validator.ts`
+- `src/lib/research/types.ts`
+- `workers/daily-research.ts`
+- `memory/fixes/FIX-005.md`
+
+---
+
 # 2026-08-31
 
 ## FIX-004 - Daily Research Worker Report Type Regression

@@ -92,8 +92,6 @@ async function main() {
       report = await generateDailyResearchReport(snapshot);
     } catch (error) {
       llmError = error instanceof Error ? error : new Error(String(error));
-      // Log the error but continue to outer catch handler
-      const errorMsg = llmError.message;
       console.error(JSON.stringify({
         worker: "daily-research",
         phase: "generating",
@@ -103,14 +101,32 @@ async function main() {
         apiCalls,
         providersSucceeded: snapshotProviders.succeeded,
         providersFailed: snapshotProviders.failed,
-        llmError: errorMsg,
+        llmError: llmError.message,
         durationMs: Date.now() - startedAt
       }, null, 2));
     }
-    
-    // If LLM failed, propagate the error so it's handled in outer catch
+
     if (llmError) {
-      throw llmError;
+      const durationMs = Date.now() - startedAt;
+      await updateResearchRun(supabase, runId, {
+        state: "failed",
+        completed_at: new Date().toISOString(),
+        duration_ms: durationMs,
+        error: llmError.message.slice(0, 1000)
+      });
+
+      console.warn(JSON.stringify({
+        worker: "daily-research",
+        runId,
+        runDate,
+        state: "failed",
+        durationMs,
+        snapshotId: snapshotRow.id,
+        error: llmError.message,
+        degraded: true,
+        reason: "snapshot saved; report generation failed"
+      }, null, 2));
+      return;
     }
     if (!report) {
       throw new Error("Daily research LLM generation returned no report");
@@ -175,4 +191,4 @@ main().catch((error) => {
     error: describeError(error)
   }));
   process.exitCode = 1;
-});
+})

@@ -8,8 +8,8 @@ import type {
 } from "./types";
 import { DAILY_RESEARCH_SECTION_KEYS } from "./types";
 
-const DEFAULT_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_MODEL = "gpt-4o-mini";
+const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 const REQUEST_TIMEOUT_MS = 30_000;
 
 const FINANCIAL_DISCLAIMER =
@@ -73,21 +73,86 @@ function buildSources(snapshot: DailyResearchSnapshot): DailyResearchSource[] {
   return sources;
 }
 
+function normalizeEvidenceReference(reference: string): string {
+  const normalized = reference
+    .trim()
+    .replace(/\[(\d+)\]/g, ".$1")
+    .replace(/\.+/g, ".")
+    .replace(/^\./, "")
+    .replace(/\.$/, "");
+
+  if (normalized === "signals") return "signal_results";
+  if (normalized === "signal_results" || normalized === "research_snapshot") return normalized;
+  if (normalized.startsWith("research_snapshot.")) return normalized;
+  if (normalized.startsWith("signal_results.")) return normalized;
+
+  if (normalized.startsWith("signals.")) {
+    return `signal_results.${normalized.slice("signals.".length)}`;
+  }
+
+  if (normalized.startsWith("research_snapshot.signals.")) {
+    return `signal_results.${normalized.slice("research_snapshot.signals.".length)}`;
+  }
+
+  const relativeRoots = [
+    "marketData",
+    "sentimentData",
+    "defiData",
+    "kelucallsData",
+    "newsData"
+  ];
+
+  if (relativeRoots.some((root) => normalized === root || normalized.startsWith(`${root}.`))) {
+    return `research_snapshot.${normalized}`;
+  }
+
+  return normalized;
+}
+
+function collectEvidencePaths(prefix: string, value: unknown, references: Set<string>): void {
+  if (value === null || value === undefined) {
+    references.add(normalizeEvidenceReference(prefix));
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    references.add(normalizeEvidenceReference(prefix));
+    value.forEach((item, index) => collectEvidencePaths(`${prefix}[${index}]`, item, references));
+    return;
+  }
+
+  if (typeof value !== "object") {
+    references.add(normalizeEvidenceReference(prefix));
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+  references.add(normalizeEvidenceReference(prefix));
+  for (const [key, child] of Object.entries(record)) {
+    collectEvidencePaths(`${prefix}.${key}`, child, references);
+  }
+}
+
 function allowedEvidenceReferences(snapshot: DailyResearchSnapshot): Set<string> {
-  const references = new Set([
-    "research_snapshot.marketData",
-    "research_snapshot.sentimentData",
-    "research_snapshot.defiData",
-    "research_snapshot.kelucallsData",
-    "research_snapshot.newsData",
-    "signal_results"
-  ]);
+  const references = new Set<string>(["signal_results"]);
+
+  collectEvidencePaths("research_snapshot.marketData", snapshot.marketData, references);
+  collectEvidencePaths("research_snapshot.sentimentData", snapshot.sentimentData, references);
+  collectEvidencePaths("research_snapshot.defiData", snapshot.defiData, references);
+  collectEvidencePaths("research_snapshot.kelucallsData", snapshot.kelucallsData, references);
+  collectEvidencePaths("research_snapshot.newsData", snapshot.newsData, references);
+  collectEvidencePaths("signal_results", snapshot.signals, references);
 
   for (const item of snapshot.newsData?.items ?? []) {
     references.add(`research_snapshot.newsData.items.${item.id}`);
   }
   for (const signal of snapshot.signals?.signals ?? []) {
     references.add(`signal_results.signals.${signal.signal_type}`);
+    references.add(`signal_results.signals.${snapshot.signals?.signals.indexOf(signal) ?? 0}`);
+  }
+  for (const index of (snapshot.signals?.signals ?? []).keys()) {
+    references.add(`signals.signals.${index}`);
+    references.add(`signal_results.signals.${index}`);
   }
   return references;
 }
@@ -110,7 +175,8 @@ function parseSections(value: unknown, allowedEvidence: Set<string>): Record<Dai
       throw new Error(`LLM response has invalid section evidence: ${key}`);
     }
     for (const reference of evidence) {
-      if (!allowedEvidence.has(reference)) {
+      const normalizedReference = normalizeEvidenceReference(reference);
+      if (!allowedEvidence.has(normalizedReference)) {
         throw new Error(`LLM response cited unsupplied evidence: ${reference}`);
       }
     }
@@ -125,9 +191,26 @@ function parseSections(value: unknown, allowedEvidence: Set<string>): Record<Dai
   return result;
 }
 
+function normalizeJsonText(content: string): string {
+  const trimmed = content.trim();
+
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced && fenced[1]) return fenced[1].trim();
+
+  const leadingJsonStart = trimmed.indexOf("{");
+  const trailingJsonEnd = trimmed.lastIndexOf("}");
+  if (leadingJsonStart !== -1 && trailingJsonEnd !== -1 && trailingJsonEnd > leadingJsonStart) {
+    return trimmed.slice(leadingJsonStart, trailingJsonEnd + 1).trim();
+  }
+
+  return trimmed;
+}
+
 function parseJsonContent(content: string): unknown {
+  const normalized = normalizeJsonText(content);
+
   try {
-    return JSON.parse(content);
+    return JSON.parse(normalized);
   } catch {
     throw new Error("LLM response was not valid JSON");
   }
@@ -167,7 +250,7 @@ async function diagnoseLLMError(status: number, responseText: string): Promise<L
     ? (errorObj as Record<string, unknown>)?.message 
     : null;
 
-  // OpenAI 429: could be rate limiting (retryable) or quota (not retryable)
+  // Gemini 429: could be rate limiting (retryable) or quota (not retryable)
   if (status === 429) {
     const message = typeof errorMessage === "string" ? errorMessage.toLowerCase() : "";
     const quota = message.includes("quota") || message.includes("insufficient");
@@ -211,55 +294,62 @@ async function generateDailyResearchReportWithRetry(
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const response = await fetchImpl(`${baseUrl}/chat/completions`, {
+        const endpoint = `${baseUrl}/${encodeURIComponent(model)}:generateContent`;
+        const response = await fetchImpl(endpoint, {
           method: "POST",
           signal: controller.signal,
           headers: {
             "content-type": "application/json",
-            authorization: `Bearer ${apiKey}`
+            "x-goog-api-key": apiKey
           },
           body: JSON.stringify({
-            model,
-            temperature: 0,
-            response_format: { type: "json_object" },
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: JSON.stringify(payload) }
-            ]
+            system_instruction: {
+              parts: [{ text: SYSTEM_PROMPT }]
+            },
+            contents: [{
+              role: "user",
+              parts: [{ text: JSON.stringify(payload) }]
+            }],
+            generationConfig: {
+              temperature: 0,
+              responseMimeType: "application/json"
+            }
           })
         });
 
         if (response.ok) {
           const responsePayload = (await response.json()) as Record<string, unknown>;
-          const choices = Array.isArray(responsePayload.choices) ? responsePayload.choices : [];
-          const firstChoice = readRecord(choices[0]);
-          const message = readRecord(firstChoice?.message);
-          const content = message?.content;
-          if (typeof content !== "string") throw new Error("Daily research LLM returned no content");
+          const candidates = Array.isArray(responsePayload.candidates) ? responsePayload.candidates : [];
+          const firstCandidate = readRecord(candidates[0]);
+          const candidateContent = readRecord(firstCandidate?.content);
+          const contentParts = Array.isArray(candidateContent?.parts) ? (candidateContent.parts as unknown[]) : [];
+          const contentText = contentParts
+            .map((part: unknown) => typeof part === "object" && part !== null && "text" in part ? String((part as Record<string, unknown>).text ?? "") : "")
+            .join("")
+            .trim();
+
+          if (contentText === "") throw new Error("Daily research LLM returned no content");
 
           return {
             schemaVersion: 1,
             snapshotDate: snapshot.snapshotDate,
             collectedAt: snapshot.collectedAt,
             generatedAt,
-            sections: parseSections(parseJsonContent(content), allowedEvidenceReferences(snapshot)),
+            sections: parseSections(parseJsonContent(contentText), allowedEvidenceReferences(snapshot)),
             sources: buildSources(snapshot),
             financialDisclaimer: FINANCIAL_DISCLAIMER
           };
         }
 
-        // Response not ok, diagnose the error
         const responseText = await response.text();
         lastDiagnosis = await diagnoseLLMError(response.status, responseText);
 
-        // If not retryable, fail immediately
         if (!lastDiagnosis.retryable) {
           throw new Error(
             `Daily research LLM request failed (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
           );
         }
 
-        // Retryable error, log and continue to retry
         console.warn("[daily-research] LLM request transient error", {
           attempt,
           maxRetries: MAX_RETRIES,
@@ -268,15 +358,19 @@ async function generateDailyResearchReportWithRetry(
         });
 
         if (attempt < MAX_RETRIES) {
-          // Exponential backoff: 1s, 2s, 4s (capped at 30s)
-          const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+          const retryAfterHeader = response.headers.get("retry-after");
+          const retryAfterSeconds = retryAfterHeader ? Number.parseFloat(retryAfterHeader) : Number.NaN;
+          const fallbackDelayMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+          const retryAfterDelayMs = Number.isFinite(retryAfterSeconds)
+            ? Math.max(0, retryAfterSeconds * 1000)
+            : fallbackDelayMs;
+          const delayMs = Math.max(retryAfterDelayMs, fallbackDelayMs);
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       } finally {
         clearTimeout(timeout);
       }
     } catch (error) {
-      // If this was the last attempt and we have a diagnosis, include it
       if (attempt === MAX_RETRIES && lastDiagnosis) {
         throw new Error(
           `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
@@ -286,7 +380,12 @@ async function generateDailyResearchReportWithRetry(
     }
   }
 
-  // Should not reach here
+  if (lastDiagnosis) {
+    throw new Error(
+      `Daily research LLM request failed after ${MAX_RETRIES} attempts (${lastDiagnosis.category}): ${lastDiagnosis.reason}`
+    );
+  }
+
   throw new Error("Daily research LLM generation failed");
 }
 
@@ -294,11 +393,11 @@ export async function generateDailyResearchReport(
   snapshot: DailyResearchSnapshot,
   options: DailyResearchGeneratorOptions = {}
 ): Promise<DailyResearchReport> {
-  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
-  if (!apiKey || apiKey.trim() === "") throw new Error("Missing OPENAI_API_KEY");
+  const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY ?? process.env.OPENAI_API_KEY;
+  if (!apiKey || apiKey.trim() === "") throw new Error("Missing GEMINI_API_KEY");
 
   const fetchImpl = options.fetchImpl ?? fetch;
-  const baseUrl = (options.baseUrl ?? process.env.OPENAI_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? process.env.GEMINI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   const model = options.model ?? process.env.DAILY_RESEARCH_MODEL ?? DEFAULT_MODEL;
   const timeoutMs = options.timeoutMs ?? Number(process.env.DAILY_RESEARCH_TIMEOUT_MS ?? REQUEST_TIMEOUT_MS);
   const generatedAt = options.generatedAt ?? new Date().toISOString();

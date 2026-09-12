@@ -395,9 +395,11 @@ export const DAILY_RESEARCH_SECTION_KEYS = [
 
 export type DailyResearchSectionKey = (typeof DAILY_RESEARCH_SECTION_KEYS)[number];
 
+export type DailyResearchEvidenceReference = string;
+
 export interface DailyResearchSection {
   content: string;
-  evidence: string[];
+  evidence: DailyResearchEvidenceReference[];
 }
 
 export interface DailyResearchSource {
