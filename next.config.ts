@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Supabase Storage public assets (stable channel avatars + token logos).
+        // Scoped to the public object path; the project subdomain is matched by
+        // wildcard so no project ref needs to be hardcoded here.
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
         protocol: "https",
         hostname: "api.telegram.org",
       },

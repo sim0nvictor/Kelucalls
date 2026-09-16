@@ -11,7 +11,7 @@
 ## BL-001 — Intent Communities
 
 **Priority:** P1  
-**Status:** pending
+**Status:** completed
 
 ### Goal
 
@@ -183,15 +183,15 @@ First:
 
 ### Problem
 
-Channel avatars and token logos are inconsistent.
+Channel avatars and token logos were inconsistent and depended on external URLs.
 
 ### Channels
 
-The channel avatar worker runs, but some channels still fail to fetch their avatars.
+The channel avatar worker could persist temporary Telegram file URLs, which later expired.
 
 ### Tokens
 
-Token avatars/logos are currently fetched directly from **DexScreener**. A **logo backfill worker** is also used to populate missing token logos.
+Token logos were persisted directly from **DexScreener**, leaving production dependent on an external CDN.
 
 ### Goal
 
@@ -204,15 +204,19 @@ Make channel avatars and token logos as consistent and reliable as possible.
 - Missing images have controlled fallbacks.
 - Backfill processes can repair missing images.
 
+### Resolution
+
+External images are downloaded by trusted workers and stored in Supabase Storage. Stable URLs are persisted in `channels.avatar_url` and `tokens.logo_url`. The UI falls back to initials when an image is missing or fails, and stable assets are lazy-loaded by default.
+
 ### Acceptance criteria
 
-- [ ] Identify why channel avatar fetches fail.
-- [ ] Improve handling/backfill of failed channel avatar fetches where appropriate.
-- [ ] Document the token logo and backfill flow.
-- [ ] Missing token logos are handled gracefully.
-- [ ] Missing channel avatars are handled gracefully.
-- [ ] Existing valid images are not unnecessarily overwritten.
-- [ ] Public pages do not show broken-image states for normal missing-data cases.
+- [x] Identify why channel avatar fetches fail.
+- [x] Improve handling/backfill of failed channel avatar fetches where appropriate.
+- [x] Document the token logo and backfill flow.
+- [x] Missing token logos are handled gracefully.
+- [x] Missing channel avatars are handled gracefully.
+- [x] Existing valid images are not unnecessarily overwritten.
+- [x] Public pages do not show broken-image states for normal missing-data cases.
 
 ---
 
@@ -332,7 +336,7 @@ For every item:
 | ID     | Item                          | Status  |
 | ------ | ----------------------------- | ------- |
 | BL-001 | Intent Communities            | pending |
-| BL-002 | Automated Insight Worker      | pending |
+| BL-002 | Automated Insight Worker      | done    |
 | BL-003 | Channel Page 24-channel limit | done    |
 | BL-004 | Channel Average ROI / ranking | pending |
 | BL-005 | Channel & Token avatars/logos | pending |

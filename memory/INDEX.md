@@ -95,6 +95,7 @@ Documents bugs, crashes, regressions, root causes, and permanent solutions.
 | FIX-001 | `fixes/FIX-001.md` | Dashboard calls query and Supabase RLS issue                         |
 | FIX-004 | `fixes/FIX-004.md` | Daily Research worker awaited report type regression                 |
 | FIX-005 | `fixes/FIX-005.md` | Daily Research validation contract drift and numeric false positives |
+| FIX-006 | `fixes/FIX-006.md` | Stable channel avatars and token logos in Supabase Storage           |
 
 > **Important:** Always search this category before fixing a bug.
 

@@ -7,9 +7,10 @@ type ChannelAvatarProps = {
   src: string | null | undefined;
   title: string;
   size?: number;
+  priority?: boolean;
 };
 
-export function ChannelAvatar({ src, title, size = 48 }: ChannelAvatarProps) {
+export function ChannelAvatar({ src, title, size = 48, priority = false }: ChannelAvatarProps) {
   const [imgFailed, setImgFailed] = useState(false);
 
   const initials = title
@@ -33,7 +34,7 @@ export function ChannelAvatar({ src, title, size = 48 }: ChannelAvatarProps) {
           fill
           sizes={`${size}px`}
           className="object-cover"
-          loading="eager" 
+          loading={priority ? "eager" : "lazy"}
           onError={() => setImgFailed(true)}
         />
       </div>

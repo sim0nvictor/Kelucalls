@@ -19,6 +19,32 @@ It answers:
 
 The ledger is intentionally concise.
 
+---
+
+# 2026-09-16
+
+## FIX-006 - Stable Avatar and Token Logo Storage
+
+**Type:** Fix / Security / Architecture
+
+**What changed:** Replaced permanent Telegram Bot API and DexScreener image URLs with a shared server-side resolver that downloads images into the public Supabase Storage `assets` bucket. Stable URLs are stored in `channels.avatar_url` and `tokens.logo_url` using deterministic paths and upsert replacement. New channel discovery and token ingestion use the same resolver; rerunnable workers repair existing rows.
+
+**Why:** Telegram `getFile` URLs are temporary and include the bot token. DexScreener CDN URLs are external dependencies that can disappear or change. Both caused production image failures.
+
+**UI safety:** `ChannelAvatar` and `TokenAvatar` render deterministic fallbacks on missing or failed images, so broken image states are not shown. Images are lazy-loaded by default, with an explicit priority option for critical callers.
+
+**Security:** Source URLs remain runtime-only. Storage writes require trusted service-role workers. No bot-token-bearing URL is intentionally persisted.
+
+**Related:**
+
+- `workers/asset-store.js`
+- `scripts/channel-avatar-sync.js`
+- `workers/token-logo-backfill.js`
+- `scraper/index.js`
+- `supabase/migrations/017_asset_storage.sql`
+- `memory/features/channel-avatar.md`
+- `memory/features/tokens.md`
+
 Detailed information belongs in the appropriate memory category:
 
 ```text

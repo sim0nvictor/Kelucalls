@@ -39,6 +39,12 @@ const ACTIVE_STATES = new Set<ResearchRunState>([
   "validating"
 ]);
 const STALE_RUN_MS = 2 * 60 * 60 * 1000;
+const RESEARCH_RUN_OPTIONAL_FIELDS = new Set([
+  "snapshot_id",
+  "snapshot_date",
+  "next_retry_at",
+  "llm_error"
+]);
 
 export async function claimResearchRun(
   supabase: SupabaseClient,
@@ -90,11 +96,39 @@ export async function updateResearchRun(
   runId: string,
   values: Record<string, unknown>
 ): Promise<void> {
-  const { error } = await supabase
-    .from("research_run")
-    .update(values)
-    .eq("id", runId);
-  if (error) throw error;
+  let payload: Record<string, unknown> = { ...values };
+  let lastError: unknown = null;
+  const maxAttempts = Math.max(1, Object.keys(payload).length + 1);
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const { error } = await supabase
+      .from("research_run")
+      .update(payload)
+      .eq("id", runId);
+
+    if (!error) return;
+    lastError = error;
+
+    if (error.code !== "PGRST204" || typeof error.message !== "string") {
+      throw error;
+    }
+
+    const missingColumn = error.message.match(/'([^']+)'/i)?.[1];
+    if (!missingColumn || !RESEARCH_RUN_OPTIONAL_FIELDS.has(missingColumn)) {
+      throw error;
+    }
+
+    const remaining = { ...payload };
+    delete remaining[missingColumn];
+    payload = remaining;
+
+    if (Object.keys(payload).length === 0) {
+      return;
+    }
+  }
+
+  if (lastError instanceof Error) throw lastError;
+  throw new Error(String(lastError));
 }
 
 export async function notifyResearchAdmins(

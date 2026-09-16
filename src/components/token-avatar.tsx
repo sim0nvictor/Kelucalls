@@ -7,9 +7,10 @@ type TokenAvatarProps = {
   src?: string | null;
   symbol: string;
   size?: number;
+  priority?: boolean;
 };
 
-export function TokenAvatar({ src, symbol, size = 40 }: TokenAvatarProps) {
+export function TokenAvatar({ src, symbol, size = 40, priority = false }: TokenAvatarProps) {
   const [imgFailed, setImgFailed] = useState(false);
 
   const initials = symbol.slice(0, 3).toUpperCase();
@@ -27,7 +28,7 @@ export function TokenAvatar({ src, symbol, size = 40 }: TokenAvatarProps) {
           fill
           sizes={`${size}px`}
           className="object-cover"
-          loading="eager"
+          loading={priority ? "eager" : "lazy"}
           onError={() => setImgFailed(true)}
         />
       </div>

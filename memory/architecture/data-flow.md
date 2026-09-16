@@ -1,6 +1,5 @@
 # Kelucalls — Data-Flow Architecture
 
-
 ## 0. How this doc relates to the other three
 
 - **Frontend doc** — what the browser renders and which lib functions it calls.
@@ -110,7 +109,7 @@ intent-panel.tsx / intent-summary.tsx      INSERT user_notifications, THEN UPDAT
                                           /account/notifications page
 ```
 
-Key property carried over from the backend doc: **the app never scores anything itself.** Every KeluScore-related page is a pure read of `intent_scores`/`intent_history`/`intent_summaries`, which is *why* those three tables are the only place the actual scoring math (weights, saturation curves, grade thresholds) needs to live.
+Key property carried over from the backend doc: **the app never scores anything itself.** Every KeluScore-related page is a pure read of `intent_scores`/`intent_history`/`intent_summaries`, which is _why_ those three tables are the only place the actual scoring math (weights, saturation curves, grade thresholds) needs to live.
 
 ## 4. Flow 3 — Channel submission → moderation → tracked channel
 
@@ -125,6 +124,7 @@ Key property carried over from the backend doc: **the app never scores anything 
 Two independent identity flows exist; both ultimately touch the same `auth.users` table but never cross paths at runtime (see backend doc §2.2 for the full rationale).
 
 **End-user signup → first page load:**
+
 ```
 signup-form.tsx (client) → Supabase Auth signUp() via createBrowserClient (cookie-writing)
       │
@@ -142,6 +142,7 @@ server-side rather than trusting the cookie)
 ```
 
 **Admin sign-in (separate system entirely):**
+
 ```
 Admin login form → admin/auth.ts server action → verifies credentials against
 Supabase Auth (anon client) AND checks admin_users membership (service-role client)
@@ -190,34 +191,34 @@ for campaign reporting, no path back into ranking or scoring data.
 
 There are **two independent notification surfaces** fed by different (sometimes overlapping) triggers:
 
-| Surface | Written by | Read by | Delivery |
-|---|---|---|---|
-| `user_notifications` (in-app inbox) | `intent-alerts.js`, other alert workers, via server-role insert | `notification-bell.tsx`, `/account/notifications` (`markAllNotificationsReadAction`) | Web only, user must visit the site |
-| `bot_events` → Telegram DM | Any worker that detects an event (`achievement`, `new_call`, `trending`, `coordinated_call`) | `apps/bot` (Telegraf), polls/consumes the queue, sends via Telegram, marks `processed = true` | Push, via `@KeluCallsAlerts_bot`, independent of whether the user ever opens kelucalls.com |
+| Surface                             | Written by                                                                                   | Read by                                                                                       | Delivery                                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `user_notifications` (in-app inbox) | `intent-alerts.js`, other alert workers, via server-role insert                              | `notification-bell.tsx`, `/account/notifications` (`markAllNotificationsReadAction`)          | Web only, user must visit the site                                                         |
+| `bot_events` → Telegram DM          | Any worker that detects an event (`achievement`, `new_call`, `trending`, `coordinated_call`) | `apps/bot` (Telegraf), polls/consumes the queue, sends via Telegram, marks `processed = true` | Push, via `@KeluCallsAlerts_bot`, independent of whether the user ever opens kelucalls.com |
 
 A user's bot-side preferences (`telegram_alert_preferences` — chains filter, `min_score`, achievement thresholds, verified-channels-only) are entirely separate rows from their website `user_alert_rules`, linked only informally (same person, two different identity rows: `telegram_users.telegram_chat_id` vs. `auth.users.id`) — there's no DB foreign key joining a website account to a Telegram bot user in the schema as written.
 
 ## 8. What triggers what — schedule/trigger summary
 
-| Trigger | Process | Effect |
-|---|---|---|
-| New Telegram message in a tracked channel | scraper (event-driven, real-time) | `tokens`/`calls` insert |
-| Cron/schedule (`worker:price`) | `price-update.js` | `tokens.last_price_usd`, `call_metrics` refresh |
-| Cron/schedule (`worker:trending`, or `worker:all`) | `trending-aggregate.js` | `refresh_public_analytics()` → `channel_stats` + `trending_tokens` |
-| Cron/schedule (`worker:intent`) | `intent-engine.js` | `intent_scores`/`intent_history`/`score_changes` |
-| Cron/schedule, after intent cycle (`worker:alerts`) | `intent-alerts.js` | `user_notifications` insert, `score_changes.notified_at` |
-| Cron/schedule (`worker:summaries`) | `intent-summaries.js` | `intent_summaries` (LLM-backed, cost-gated) |
-| Weekly/manual (`worker:avatars`) | `channel-avatar-sync.js` | `channels.avatar_url` via Telegram Bot API |
-| Manual/scheduled (`worker:logos`) | `token-logo-backfill.js` | token logo backfill |
-| Admin action in `/kx-admin` | web app (on request) | `channels`, `ads`, `sponsored_placements`, `submissions` review, `moderation_reports` |
-| Public form submit | web app (on request) | `submissions`, `article_views`, `contact` (email, not DB), `ad_impressions`/`ad_clicks` |
-| User account action | web app (on request) | `profiles`, `user_*_watchlist`, `user_alert_rules`, `user_notifications` (read/mark-read) |
-| Every page load of a live surface | web app (on request, `dynamic="force-dynamic"`/`noStore()`) | Reads only — `channel_stats`, `trending_tokens`, `calls`, `intent_scores`, etc. |
+| Trigger                                                   | Process                                                     | Effect                                                                                    |
+| --------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| New Telegram message in a tracked channel                 | scraper (event-driven, real-time)                           | `tokens`/`calls` insert                                                                   |
+| Cron/schedule (`worker:price`)                            | `price-update.js`                                           | `tokens.last_price_usd`, `call_metrics` refresh                                           |
+| Cron/schedule (`worker:trending`, or `worker:all`)        | `trending-aggregate.js`                                     | `refresh_public_analytics()` → `channel_stats` + `trending_tokens`                        |
+| Cron/schedule (`worker:intent`)                           | `intent-engine.js`                                          | `intent_scores`/`intent_history`/`score_changes`                                          |
+| Cron/schedule, after intent cycle (`worker:alerts`)       | `intent-alerts.js`                                          | `user_notifications` insert, `score_changes.notified_at`                                  |
+| Cron/schedule (`worker:summaries`)                        | `intent-summaries.js`                                       | `intent_summaries` (LLM-backed, cost-gated)                                               |
+| New channel discovery or weekly/manual (`worker:avatars`) | scraper + `channel-avatar-sync.js`                          | Telegram photo → Supabase Storage → stable `channels.avatar_url`                          |
+| Token discovery or manual/scheduled (`worker:logos`)      | scraper + `token-logo-backfill.js`                          | DexScreener image → Supabase Storage → stable `tokens.logo_url`                           |
+| Admin action in `/kx-admin`                               | web app (on request)                                        | `channels`, `ads`, `sponsored_placements`, `submissions` review, `moderation_reports`     |
+| Public form submit                                        | web app (on request)                                        | `submissions`, `article_views`, `contact` (email, not DB), `ad_impressions`/`ad_clicks`   |
+| User account action                                       | web app (on request)                                        | `profiles`, `user_*_watchlist`, `user_alert_rules`, `user_notifications` (read/mark-read) |
+| Every page load of a live surface                         | web app (on request, `dynamic="force-dynamic"`/`noStore()`) | Reads only — `channel_stats`, `trending_tokens`, `calls`, `intent_scores`, etc.           |
 
 ## 9. Notable data-flow design decisions (why, not just what)
 
-- **No request-time computation of anything expensive.** Ranking scores, ROI/PnL, trending aggregates, and KeluScores are all precomputed by workers and only *read* by the web app. This is stated explicitly in multiple places (`intent_scores` comment, `computeRankingScore` mirroring, `refresh_channel_stats`) and is the reason the home/leaderboard/trending pages can stay fast despite doing nontrivial analytics.
+- **No request-time computation of anything expensive.** Ranking scores, ROI/PnL, trending aggregates, and KeluScores are all precomputed by workers and only _read_ by the web app. This is stated explicitly in multiple places (`intent_scores` comment, `computeRankingScore` mirroring, `refresh_channel_stats`) and is the reason the home/leaderboard/trending pages can stay fast despite doing nontrivial analytics.
 - **Idempotency is enforced at the write layer, not the ingestion layer**, via DB unique constraints (`calls` on `(channel_id, telegram_message_id, token_id)`, `tokens` on normalized symbol/contract) rather than the scraper trying to de-duplicate in memory — this means a scraper crash-and-restart, or a duplicate `NewMessage` event, is safe by construction.
 - **At-least-once, never at-most-once, for anything user-facing** (bot alerts, in-app notifications) — every place this tradeoff is made, the code comments justify it the same way: a missed alert is a broken feature, a duplicate is only annoying.
-- **Sponsorship money never touches the ranking pipeline.** The monetization flow (Flow 5) and the ranking flow (Flow 1) are structurally separate tables and separate queries, and the one place they *could* interact (a paid channel appearing in the leaderboard) is explicitly zeroed out in `refresh_channel_stats()`.
+- **Sponsorship money never touches the ranking pipeline.** The monetization flow (Flow 5) and the ranking flow (Flow 1) are structurally separate tables and separate queries, and the one place they _could_ interact (a paid channel appearing in the leaderboard) is explicitly zeroed out in `refresh_channel_stats()`.
 - **External, rate-limited, or costly calls are isolated into their own workers** (Dexscreener signals, LLM summaries) so an outage in a third-party dependency degrades a single feature (missing summary text, missing liquidity sub-score) rather than blocking the core scoring/ranking pipeline.

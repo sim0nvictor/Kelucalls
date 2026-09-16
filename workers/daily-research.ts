@@ -39,10 +39,6 @@ function describeError(error: unknown): string {
   }
 }
 
-function toIsoDate(value: string): string {
-  return value.slice(0, 10);
-}
-
 function computeNextRetryAt(retryAfterSeconds: number | null): string {
   const baseDelayMs = 15 * 60_000;
   const retryAfterMs =

@@ -18,6 +18,12 @@ import {
   logScraperEnvStatus,
   validateScraperEnv,
 } from "../src/lib/env/scraper-env.js";
+import {
+  isStableAssetUrl,
+  normalizeContractForPath,
+  resolveAndStoreImage,
+  resolveTelegramAvatar,
+} from "../workers/asset-store.js";
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -294,8 +300,11 @@ async function upsertToken({ symbol, contractAddress, chain, logoUrl = null }) {
       // Opportunistically backfill a missing logo on an existing token —
       // cheap, and means we don't have to wait for the price-update worker
       // (which only revisits tokens that still have an *open* call).
-      if (!existing.logo_url && logoUrl) {
-        await supabase.from("tokens").update({ logo_url: logoUrl }).eq("id", existing.id);
+      if (!isStableAssetUrl(existing.logo_url)) {
+        const stableLogoUrl = await resolveTokenLogo({ contractAddress, chain, logoUrl });
+        if (stableLogoUrl) {
+          await supabase.from("tokens").update({ logo_url: stableLogoUrl }).eq("id", existing.id);
+        }
       }
       return existing.id;
     }
@@ -310,13 +319,17 @@ async function upsertToken({ symbol, contractAddress, chain, logoUrl = null }) {
     .maybeSingle();
 
   if (bySymbol) {
-    if (!bySymbol.logo_url && logoUrl) {
-      await supabase.from("tokens").update({ logo_url: logoUrl }).eq("id", bySymbol.id);
+    if (!isStableAssetUrl(bySymbol.logo_url)) {
+      const stableLogoUrl = await resolveTokenLogo({ contractAddress, chain, logoUrl });
+      if (stableLogoUrl) {
+        await supabase.from("tokens").update({ logo_url: stableLogoUrl }).eq("id", bySymbol.id);
+      }
     }
     return bySymbol.id;
   }
 
   // Insert new token
+  const stableLogoUrl = await resolveTokenLogo({ contractAddress, chain, logoUrl });
   const { data: inserted, error } = await supabase
     .from("tokens")
     .insert({
@@ -325,7 +338,7 @@ async function upsertToken({ symbol, contractAddress, chain, logoUrl = null }) {
       name: symbol,
       chain,
       contract_address: contractAddress ?? null,
-      logo_url: logoUrl,
+      logo_url: stableLogoUrl,
       status: "active",
     })
     .select("id")
@@ -338,6 +351,58 @@ async function upsertToken({ symbol, contractAddress, chain, logoUrl = null }) {
 
   LOG.info("New token inserted", { symbol, chain, contractAddress });
   return inserted.id;
+}
+
+async function syncDiscoveredChannelAvatar(channelId, handle) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) return;
+
+  try {
+    const resolved = await resolveTelegramAvatar(
+      botToken,
+      handle,
+      supabase,
+      channelId
+    );
+    if (!resolved?.publicUrl) return;
+
+    await supabase
+      .from("channels")
+      .update({
+        avatar_url: resolved.publicUrl,
+        metadata: {
+          avatar_source_id: resolved.sourceId,
+          avatar_updated_at: new Date().toISOString(),
+        },
+      })
+      .eq("id", channelId);
+  } catch {
+    LOG.warn("New channel avatar storage failed", {
+      channelId,
+      error: "avatar resolution failed",
+    });
+  }
+}
+
+async function resolveTokenLogo({ contractAddress, chain, logoUrl }) {
+  if (!contractAddress || !logoUrl) return null;
+
+  try {
+    const { publicUrl } = await resolveAndStoreImage(supabase, {
+      sourceUrl: logoUrl,
+      pathPrefix: `tokens/${chain}/${normalizeContractForPath(contractAddress)}`,
+      fallbackExt: "png",
+      fallbackContentType: "image/png",
+    });
+    return publicUrl;
+  } catch (error) {
+    LOG.warn("Token logo storage failed", {
+      symbol: "token",
+      chain,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 }
 
 /**
@@ -515,6 +580,7 @@ async function processTrackingQueue(client) {
         .maybeSingle();
  
       let channelId;
+      let channelCreated = false;
  
       if (existingChannel) {
         channelId = existingChannel.id;
@@ -567,6 +633,8 @@ async function processTrackingQueue(client) {
         } else {
           channelId = newChannel.id;
         }
+
+        channelCreated = true;
  
         LOG.info("Channel created", { handle, title, channelId });
       }
@@ -577,6 +645,10 @@ async function processTrackingQueue(client) {
           .update({ status: "failed", rejection_reason: "no_channel_id", processed_at: new Date().toISOString() })
           .eq("id", req.id);
         continue;
+      }
+
+      if (channelCreated) {
+        await syncDiscoveredChannelAvatar(channelId, `@${username}`);
       }
  
       const channelRow = { id: channelId, title, telegram_handle: `@${username}`, telegram_peer_id: peerId };

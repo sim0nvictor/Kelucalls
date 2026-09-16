@@ -10,7 +10,8 @@ const compat = new FlatCompat({
 });
 
 const config = [
-  { ignores: [".next", "node_modules"] },
+  // Claude worktrees are complete generated repository copies, not project sources.
+  { ignores: [".next", "node_modules", ".claude/worktrees"] },
   js.configs.recommended,
   ...compat.extends("next/core-web-vitals"),
   ...tseslint.configs.recommended,
