@@ -179,7 +179,7 @@ First:
 ## BL-005 — Consistent Channel Avatars and Token Logos
 
 **Priority:** P1  
-**Status:** pending
+**Status:** done, Android validation pending
 
 ### Problem
 
@@ -217,6 +217,8 @@ External images are downloaded by trusted workers and stored in Supabase Storage
 - [x] Missing channel avatars are handled gracefully.
 - [x] Existing valid images are not unnecessarily overwritten.
 - [x] Public pages do not show broken-image states for normal missing-data cases.
+- [x] Stable Supabase assets are delivered directly without the Next optimizer boundary.
+- [ ] Verify channel avatars and token logos on a physical Android browser.
 
 ---
 

@@ -27,6 +27,7 @@ export function TokenAvatar({ src, symbol, size = 40, priority = false }: TokenA
           alt={symbol}
           fill
           sizes={`${size}px`}
+          unoptimized={src.includes("/storage/v1/object/public/assets/")}
           className="object-cover"
           loading={priority ? "eager" : "lazy"}
           onError={() => setImgFailed(true)}

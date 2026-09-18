@@ -59,6 +59,22 @@ incidents/
 
 ---
 
+# 2026-09-17
+
+## FIX-006 follow-up - Direct stable asset delivery on mobile
+
+**Type:** Fix / Diagnosis
+
+**What changed:** `ChannelAvatar` and `TokenAvatar` now bypass Next image optimization only for public Supabase `assets` URLs. `next/image` remains in use for layout, lazy loading, and fallback handling.
+
+**Why:** The rendered production path still generated `/_next/image` requests for stable assets. Direct Storage and local optimizer probes were healthy, but physical Android request/console evidence was unavailable; direct delivery removes the optimizer boundary from the reported mobile failure path without changing the stable asset pipeline.
+
+**Validation:** Direct Storage returned HTTP 200 with an image Content-Type; local optimized requests returned HTTP 200; rendered stable asset tags no longer emitted `/_next/image`; typecheck, lint, and build passed. Android remains unverified.
+
+**Related:** `memory/fixes/FIX-006.md`, `src/components/channel-avatar.tsx`, `src/components/token-avatar.tsx`
+
+---
+
 # 2026-09-12
 
 ## FIX-005 - Daily Research Validation Contract Drift

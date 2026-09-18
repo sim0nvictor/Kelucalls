@@ -21,6 +21,8 @@ const SYSTEM_PROMPT = [
   "The user message contains the complete and only evidence available to you: a structured research snapshot and deterministic signal results.",
   "Use only values, events, dates, quotes, sources, opinions, and statistics present in that JSON.",
   "Never invent or infer a price, percentage, date, event, quote, source, KOL opinion, or token statistic.",
+  "Copy numeric values exactly from the supplied JSON when you use them; preserve the sign, decimal precision, currency, and percent marker.",
+  "Do not calculate, round, estimate, compare, or create numeric ranges. If the exact value is not present, omit the number and describe the evidence qualitatively or say it is unavailable.",
   "Do not turn missing or null data into a claim. Say that the evidence is unavailable when needed.",
   "Do not write investment recommendations, predictions, calls to action, or buy/sell/hold language.",
   "Every section must contain concise analytical prose and evidence references as JSON paths into the supplied payload.",

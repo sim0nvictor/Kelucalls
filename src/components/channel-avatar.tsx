@@ -33,6 +33,7 @@ export function ChannelAvatar({ src, title, size = 48, priority = false }: Chann
           alt={title}
           fill
           sizes={`${size}px`}
+          unoptimized={src.includes("/storage/v1/object/public/assets/")}
           className="object-cover"
           loading={priority ? "eager" : "lazy"}
           onError={() => setImgFailed(true)}

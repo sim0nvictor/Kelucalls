@@ -130,6 +130,10 @@ function normalizedNumberForComparison(value: number): number {
 }
 
 function sameNumber(claimed: number, supplied: number): boolean {
+  if (Math.sign(claimed) !== Math.sign(supplied) && claimed !== 0 && supplied !== 0) {
+    return false;
+  }
+
   const normalizedClaimed = normalizedNumberForComparison(claimed);
   const normalizedSupplied = normalizedNumberForComparison(supplied);
   const delta = Math.abs(normalizedClaimed - normalizedSupplied);
@@ -197,7 +201,7 @@ function shouldRequireNumericVerification(raw: string): boolean {
     return true;
   }
 
-  return false;
+  return Math.abs(claimed) >= 10;
 }
 
 function collectEvidencePaths(prefix: string, value: unknown, references: Set<string>): void {

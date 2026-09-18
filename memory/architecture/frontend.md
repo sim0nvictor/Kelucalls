@@ -1,6 +1,5 @@
 # Kelucalls — Frontend Architecture
 
-
 ## 1. Stack
 
 - **Framework:** Next.js 16, App Router, React 19, TypeScript
@@ -19,6 +18,7 @@
 From the README and `navbar.tsx` / `sidebar.tsx` nav arrays, the app router has (at least) these route groups:
 
 **Public marketing/dashboard surface** (`navLinks` in `navbar.tsx`):
+
 - `/` — Home dashboard (market snapshot, leaderboard, trending, live calls)
 - `/trending` — Trending tokens
 - `/opportunities` — Opportunities
@@ -32,9 +32,11 @@ From the README and `navbar.tsx` / `sidebar.tsx` nav arrays, the app router has 
 - `/terms`, `/privacy`, `/cookies`, `/disclaimer`, `/dmca` — legal pages (use `legal-layout.tsx`)
 
 **Account area** (`ACCOUNT_BASE_PATH`, nav from `account-nav.tsx`):
+
 - Overview, `/notifications`, `/watchlist`, `/alerts`, `/submissions`, `/settings`
 
 **Admin area** (`ADMIN_BASE_PATH`, nav from `sidebar.tsx` → `AdminSidebar`):
+
 - Overview, `/channels`, `/insights`, `/ads`, `/placements`, `/moderation`, `/analytics`
 - Styled as an internal "Control Studio" surface, visually distinct (dark glass panel) from the public site
 - Has its own cookie-based session system, separate from end-user auth (see §5)
@@ -42,6 +44,7 @@ From the README and `navbar.tsx` / `sidebar.tsx` nav arrays, the app router has 
 ## 3. Layout composition
 
 `layout.tsx` (root layout) is a server component that:
+
 - Sets global `metadata`/`viewport` (OG tags, icons, `siteConfig`-driven title template)
 - Injects `JsonLd` (Organization + Website schema from `@/lib/schema`)
 - Wraps every page in `<Navbar />` + `{children}` + `<Footer />` + `<AdPopup />`
@@ -55,6 +58,7 @@ Admin and account areas each have their own nested layout + sidebar/nav pattern 
 ## 4. Key component inventory (by domain)
 
 ### Navigation / chrome
+
 - `navbar.tsx` — client component. Sticky nav with live search (debounced, queries channels + tokens), mobile menu, `NotificationBell`. Exports `SearchBox` (reused on the homepage hero).
 - `footer.tsx` — server component. Social links (X/Telegram/Bot) from `siteConfig.social`, product links, resource links.
 - `sidebar.tsx` → `AdminSidebar` — client component, admin-only nav, active-route highlighting via `usePathname`.
@@ -62,6 +66,7 @@ Admin and account areas each have their own nested layout + sidebar/nav pattern 
 - `page-header.tsx`, `breadcrumb.tsx`, `section-heading.tsx`, `table-of-contents.tsx` — generic page-chrome primitives.
 
 ### Dashboard / market data
+
 - `data-table.tsx` — the core generic table system. Exports `DataTable`, `DataTableHeader`, `DataTableRow`, `SortableColumn`, plus data-shaped cell components: `MetricValue`, `PerformanceValue`, `ChannelIdentity`, `TokenIdentity`, `StatusBadge`, `VerificationBadge`. This is the shared building block for the leaderboard, trending, and live-calls tables.
 - `leaderboard-with-placements.tsx` — leaderboard table that interleaves organic rankings with sponsored placements (kept visually distinct per the ranking-methodology rules in the README).
 - `token-market.tsx` — large client component (~24K) for the live token market view: search, sort, live snapshot refresh via `@/lib/token-market` (`findSnapshot`, `snapshotKey`, `symbolKey`).
@@ -72,16 +77,19 @@ Admin and account areas each have their own nested layout + sidebar/nav pattern 
 - `score-badge.tsx`, `score-bar.tsx` — Smart Score display atoms.
 
 ### Intent system (alerting/scoring feature)
+
 - `intent-panel.tsx` — composes `IntentSummary`, `ScoreBadge`, `ScoreBar`, `ScoreHistoryChart` (all under `@/components/intent/...`), backed by `@/lib/intent/queries` and `@/lib/intent/types`. This is the UI for the "intent engine" (see backend workers `intent-engine.js`, `intent-scoring.js`, `intent-signals.js`, `intent-alerts.js`, `intent-summaries.js`).
 - `intent-summary.tsx` — the summary sub-component.
 
 ### Auth
+
 - `auth-shell.tsx` — deliberately a **server component** wrapper (no client JS) shared by every auth screen (login/signup/reset/forgot), so only the form inside ships as client code.
 - `login-form.tsx`, `signup-form.tsx`, `forgot-password-form.tsx`, `reset-password-form.tsx` — client forms, each rendered inside `AuthShell`.
 - `form-primitives.tsx` — shared input/label/error primitives for all auth + other forms.
 - Two parallel auth systems: **end-user auth** (`@/lib/auth/*`, `ACCOUNT_BASE_PATH`, `LOGIN_PATH`) and **admin auth** (`@/lib/admin/*`, cookie-based, `ADMIN_ACCESS_COOKIE`/`ADMIN_REFRESH_COOKIE`/`ADMIN_EXPIRES_COOKIE`, refreshed via `refreshAdminSession` in middleware).
 
 ### Account-area features
+
 - `notification-bell.tsx` — client component; **deliberately fetches its own unread count client-side after hydration** rather than reading session server-side, so that public/static pages using the navbar stay cacheable and don't pay a per-request session-query cost. Only signed-in users trigger the fetch.
 - `notification-item.tsx`, `notifications-master-switch.tsx`, `mark-all-read-button.tsx` — notification list UI.
 - `alert-rule-controls.tsx`, `create-alert-form.tsx` — user-configurable alert rules (feeding the intent-alerts worker).
@@ -90,11 +98,13 @@ Admin and account areas each have their own nested layout + sidebar/nav pattern 
 - `confirm-delete-button.tsx` — generic destructive-action confirm pattern.
 
 ### Submission / forms
+
 - `submission-form.tsx` — channel submission for listing (feeds admin moderation queue).
 - `contact-form.tsx` — `/contact` page form.
 - `image-url-field.tsx`, `ad-banner-uploader.tsx`, `date-range-picker.tsx` — form field building blocks, mainly used in admin (ads/placements management).
 
 ### Content / marketing
+
 - `article-banner.tsx`, `article-share.tsx` — insights/blog article chrome.
 - `search-bar.tsx` — standalone search input (distinct from navbar's inline `SearchBox`).
 - `json-ld.tsx` — structured-data injector used in root layout.
@@ -118,6 +128,7 @@ Admin and account areas each have their own nested layout + sidebar/nav pattern 
 ## 6. Middleware & security
 
 `middleware.ts` handles, in one file:
+
 - **Admin session refresh**: reads `ADMIN_ACCESS_COOKIE` / `ADMIN_REFRESH_COOKIE` / `ADMIN_EXPIRES_COOKIE`, calls `refreshAdminSession`, rewrites cookies via `buildAdminSessionCookies`.
 - **End-user auth routing**: `AUTH_ROUTES`, `LOGIN_PATH`, `NEXT_PARAM`, `safeNextPath` for post-login redirects.
 - **Supabase SSR client** (`createServerClient` from `@supabase/ssr`) for reading the user's Supabase session in middleware.
@@ -131,6 +142,7 @@ Admin and account areas each have their own nested layout + sidebar/nav pattern 
 - **Sponsored content is structurally separated, not just styled differently**: `SponsoredPlacementCard` / `leaderboard-with-placements.tsx` and `getSponsoredPlacements`/`getSponsoredTokenPlacements` are distinct code paths from the organic ranking data, matching the "sponsored placements excluded from ranking inputs" rule in the README.
 - **Smart Score formula** (`Score = ROI×0.5 + WinRate×0.3 + log(TotalCalls+1)×0.2`) is implemented in `computeRankingScore` in `@/lib/metrics.ts` — the single source of truth for ranking math on the frontend.
 - **Live/real-time pages opt out of caching explicitly** (`export const dynamic = "force-dynamic"`, `revalidate = 0`) rather than relying on defaults, since market data must be fresh.
+- Stable channel avatars and token logos remain `next/image` components, but public Supabase `assets` URLs are marked `unoptimized` so browsers request the verified Storage object directly.
 
 ## 8. Known gap in this snapshot
 
