@@ -125,3 +125,14 @@ Screenshots are local ignored artifacts and are not included in Git:
 
 Each folder contains the ten requested viewport screenshots and the 390px
 drawer screenshot.
+
+## Git delivery
+
+- Navbar implementation commit: `b9f99b4` (`Fix responsive navbar layout`).
+- Pushed to `origin/main`; remote `main` resolved to
+  `b9f99b4bfcad4928b7721913adc26d3e48bd65ed`.
+- Local `main` was already one commit ahead before this task (`dc0e94f`).
+  Pushing `main` also published that pre-existing commit; it was not modified
+  as part of this work.
+- Other pre-existing worktree modifications remain uncommitted and were not
+  included in the navbar commit.
