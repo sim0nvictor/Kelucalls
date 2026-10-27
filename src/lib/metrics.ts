@@ -1,6 +1,8 @@
 import { getSimulatedInvestmentPerCall } from "@/lib/server-env";
 
-export function toNumber(value: unknown, fallback = 0) {
+export function toNumber(value: unknown, fallback?: number): number;
+export function toNumber(value: unknown, fallback: null): number | null;
+export function toNumber(value: unknown, fallback: number | null = 0): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
@@ -55,7 +57,29 @@ export function computeRankingScore(averageRoiPct: number, winRatePct: number, t
 }
 
 export function formatPercent(value: number) {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+  if (!Number.isFinite(value)) return "—";
+  if (value === 0) return "0.0%";
+  const formatted = Math.abs(value) >= 1_000
+    ? formatCompact(Math.abs(value), 1, 4)
+    : Math.abs(value).toFixed(1);
+  return `${value > 0 ? "+" : "-"}${formatted}%`;
+}
+
+export function formatCompactPercent(value: number) {
+  return formatPercent(value);
+}
+
+export function formatCompact(
+  value: number,
+  maximumFractionDigits = 1,
+  maximumSignificantDigits?: number
+) {
+  if (!Number.isFinite(value)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    maximumFractionDigits,
+    maximumSignificantDigits,
+  }).format(value);
 }
 
 export function formatMultiple(value: number) {
@@ -68,11 +92,20 @@ export function formatPrice(value: number | null) {
 
   const abs = Math.abs(value);
   if (abs >= 1) {
+    if (abs >= 1_000_000) {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        notation: "compact",
+        maximumFractionDigits: 2,
+      }).format(value);
+    }
     return "$" + value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  if (abs >= 0.01) return "$" + value.toFixed(4);
-  if (abs >= 0.000001) return "$" + value.toFixed(8);
-  return "$" + value.toExponential(2);
+  if (abs >= 0.000001) {
+    return "$" + new Intl.NumberFormat("en-US", { maximumSignificantDigits: 4 }).format(value);
+  }
+  return "$" + value.toExponential(3);
 }
 
 export function formatCurrency(value: number) {
@@ -93,11 +126,5 @@ export function formatCompactCurrency(value: number) {
 }
 
 export function formatNumber(value: number): string {
-  if (value >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`;
-  }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`;
-  }
-  return value.toLocaleString();
+  return formatCompact(value);
 }

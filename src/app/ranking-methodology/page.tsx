@@ -61,8 +61,7 @@ export default function RankingMethodologyPage() {
               <div>
                 <h3 className="text-lg font-semibold text-white">Smart Score</h3>
                 <p className="text-sm text-slate-400">
-                  Our proprietary composite score (0-100) that combines multiple metrics
-                  to provide a comprehensive view of channel performance.
+                  Current formula in the app: (avg_roi * 0.5) + (win_rate * 0.3) + (ln(calls + 1) * 0.2).
                 </p>
               </div>
             </div>
@@ -70,14 +69,17 @@ export default function RankingMethodologyPage() {
         </Card>
       </div>
       <p>
-        The Smart Score is our proprietary composite metric that combines multiple
-        performance indicators into a single score. It weighs factors including
-        ROI, win rate, consistency, and call volume to provide a balanced
-        assessment of channel quality.
+        The current Smart Score combines average ROI, win rate, and a logarithmic
+        call-volume contribution. The implemented formula is:
+      </p>
+      <p className="rounded-xl border border-cyan-400/20 bg-cyan-400/5 px-4 py-3 font-mono text-sm text-cyan-100">
+        (avg_roi * 0.5) + (win_rate * 0.3) + (ln(calls + 1) * 0.2)
       </p>
       <p>
-        A higher Smart Score indicates a channel that performs well across
-        multiple dimensions, not just in one area.
+        In plain terms, it blends a channel&apos;s average ROI, how often it wins,
+        and the activity signal from call count using a logarithmic adjustment so
+        more historical calls help the score without letting volume overpower the
+        quality metrics.
       </p>
 
       <h2 id="average-roi">Average ROI</h2>

@@ -14,7 +14,7 @@ import {
   VerificationBadge,
 } from "@/components/ui/data-table";
 import { getLeaderboard } from "@/lib/dashboard-data";
-import { formatMultiple } from "@/lib/metrics";
+import { formatCompactPercent, formatMultiple, formatNumber } from "@/lib/metrics";
 import type { RankingMode } from "@/types/kelucalls";
 
 type ChannelsPageProps = {
@@ -59,118 +59,100 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
       <section className="grid gap-6 xl:grid-cols-[1fr_22rem]">
         <DataTable
           caption="Tracked channel rankings"
-          minWidth="min-w-0 sm:min-w-[68rem]"
+          minWidth="min-w-[460px] sm:min-w-[68rem]"
           tableClassName="table-fixed"
-          className="self-start"
+          columns={[
+            { className: "w-[42px] sm:w-16" },
+            { className: "w-[160px] sm:w-56" },
+            { className: "hidden sm:table-column" },
+            { className: "w-[64px] sm:w-auto" },
+            { className: "w-[75px] sm:w-auto" },
+            { className: "w-[105px] sm:w-auto" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+          ]}
+          className="self-start -mx-4 w-[calc(100%+2rem)] rounded-none border-x-0 border-y border-white/[0.08] bg-slate-950/20 sm:mx-0 sm:w-full sm:rounded-lg sm:border"
         >
-          <DataTableHeader>
-            <th scope="col" className="w-14 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 first:pl-4">
+          <DataTableHeader className="bg-slate-950/95 backdrop-blur">
+            <th scope="col" className="sticky left-0 z-50 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-left sm:text-xs">
               Rank
             </th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+            <th scope="col" className="sticky left-[42px] z-40 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:left-16 sm:px-3 sm:text-xs">
               Channel
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               Verification
             </th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+            <th scope="col" className="sticky z-30 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
               Calls
             </th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
-              Win Rate
+            <th scope="col" className="sticky z-30 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
+              Win %
             </th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+            <th scope="col" className="sticky z-30 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
               Avg ROI
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               Avg Multiple
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               Best Multiple
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               2x
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               10x
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               100x
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               PnL
             </th>
-            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">
               Status
             </th>
           </DataTableHeader>
           <tbody>
             {channels.map((channel, index) => (
-              <DataTableRow key={channel.id} interactive>
-                <td className="px-3 py-3 text-left first:pl-4">
-                  <span className={index < 3 ? "font-semibold text-yellow-300" : "font-semibold text-slate-400"}>
+              <DataTableRow key={channel.id} interactive className="group">
+                <td className="sticky left-0 z-10 bg-[#06101f] px-1.5 py-2 text-center group-hover:bg-[#0b1c2a] sm:px-3 sm:text-left">
+                  <span className={`font-semibold tabular-nums ${index < 3 ? ["text-amber-300", "text-slate-200", "text-orange-300"][index] : "text-slate-400"}`}>
                     #{index + 1}
                   </span>
                 </td>
-                <td className="px-3 py-3">
+                <td className="sticky left-[42px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-16 sm:px-3">
                   <ChannelIdentity
                     href={`/channels/${channel.slug}`}
-                    title={channel.title}
+                    title={
+                      channel.title.trim() && channel.title.trim().toLowerCase() !== "telegram"
+                        ? channel.title
+                        : channel.telegramHandle.replace(/^@/, "") || "Unknown channel"
+                    }
                     avatarUrl={channel.avatarUrl}
-                    description={channel.description}
+                    description={`Telegram · ${formatNumber(channel.totalCalls)} calls`}
+                    className="min-h-11 gap-2"
                   />
-                  <div className="mt-1 flex items-center gap-2 sm:hidden">
-                    <a
-                      href={channel.telegramUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-cyan-300 hover:text-cyan-200"
-                    >
-                      Telegram
-                    </a>
-                    <VerificationBadge verified={channel.isVerified} />
-                  </div>
-                  <details className="mt-2 sm:hidden">
-                    <summary className="cursor-pointer text-xs text-cyan-300 marker:text-slate-600">
-                      More metrics
-                    </summary>
-                    <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                      <div>
-                        <dt className="text-slate-500">Avg multiple</dt>
-                        <dd className="text-slate-300">{formatMultiple(channel.averageMultiple)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-slate-500">Best multiple</dt>
-                        <dd className="text-slate-300">{formatMultiple(channel.bestMultiple)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-slate-500">Milestones</dt>
-                        <dd className="text-slate-300">
-                          {channel.hit2xCount} / {channel.hit10xCount} / {channel.hit100xCount}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-slate-500">PnL</dt>
-                        <dd><PerformanceValue value={channel.simulatedCurrentPnlUsd} kind="currency" /></dd>
-                      </div>
-                      <div>
-                        <dt className="text-slate-500">Status</dt>
-                        <dd><StatusBadge status={channel.status} /></dd>
-                      </div>
-                    </dl>
-                  </details>
                 </td>
                 <td className="hidden px-3 py-3 sm:table-cell">
                   <VerificationBadge verified={channel.isVerified} />
                 </td>
-                <td className="px-3 py-3 text-right">
-                  <MetricValue value={channel.totalCalls} />
+                <td className="px-1 py-2 text-right sm:px-3 sm:py-3">
+                  <MetricValue value={formatNumber(channel.totalCalls)} className="text-xs sm:text-sm" />
                 </td>
-                <td className="px-3 py-3 text-right">
-                  <PerformanceValue value={channel.winRatePct} />
+                <td className="px-1 py-2 text-right sm:px-3 sm:py-3">
+                  <PerformanceValue value={channel.winRatePct} className="text-xs sm:text-sm" />
                 </td>
-                <td className="px-3 py-3 text-right">
-                  <PerformanceValue value={channel.averageRoiPct} />
+                <td className="px-1.5 py-2 text-right sm:px-3 sm:py-3">
+                  <span className={`whitespace-nowrap font-mono text-xs tabular-nums sm:text-sm ${channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}`}>
+                    {formatCompactPercent(channel.averageRoiPct)}
+                  </span>
                 </td>
                 <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">
                   {formatMultiple(channel.averageMultiple)}

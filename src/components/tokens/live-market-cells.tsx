@@ -16,23 +16,13 @@ import {
   type TokenMarketQuery,
   type TokenMarketSnapshot,
 } from "@/lib/token-market";
+import { formatPercent, formatPrice } from "@/lib/metrics";
+
+export { formatPrice } from "@/lib/metrics";
 
 type SnapshotMap = Record<string, TokenMarketSnapshot>;
 
 const LiveMarketContext = createContext<SnapshotMap>({});
-
-export function formatPrice(value: number | null) {
-  if (value === null) return "\u2014";
-  if (value === 0) return "$0";
-
-  const abs = Math.abs(value);
-  if (abs >= 1) {
-    return "$" + value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  if (abs >= 0.01) return "$" + value.toFixed(4);
-  if (abs >= 0.000001) return "$" + value.toFixed(8);
-  return "$" + value.toExponential(2);
-}
 
 export function formatCompactUsd(value: number | null) {
   if (value === null) return "\u2014";
@@ -45,8 +35,7 @@ export function formatCompactUsd(value: number | null) {
 }
 
 function formatChange(value: number | null) {
-  if (value === null) return "\u2014";
-  return (value >= 0 ? "+" : "") + value.toFixed(2) + "%";
+  return value === null ? "\u2014" : formatPercent(value);
 }
 
 function changeTone(value: number | null) {

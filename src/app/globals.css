@@ -40,3 +40,60 @@ a {
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 48px 48px;
 }
+
+.kc-data-table {
+  font-variant-numeric: tabular-nums;
+  table-layout: fixed;
+}
+
+.kc-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(2, 8, 23, 0.97);
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+}
+
+.kc-data-table thead th[class~="z-50"] {
+  z-index: 50;
+}
+
+.kc-data-table thead th[class~="z-40"] {
+  z-index: 40;
+}
+
+.kc-data-table tbody td {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+
+.kc-data-table thead th {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kc-data-table thead th > button {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kc-data-table td :is(a, span, div) {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .kc-data-table tbody td {
+    font-size: 0.875rem;
+  }
+}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TrendingUp, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import { getTrendingTokens, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
 import {
   findSnapshot,
@@ -10,7 +11,7 @@ import {
   type TokenMarketSnapshotMap,
 } from "@/lib/token-market";
 import { chainBrandColor, chainLabel, normalizeChainKey } from "@/lib/chains";
-import { formatMultiple, formatPercent } from "@/lib/metrics";
+import { formatCompactPercent, formatMultiple, formatPercent } from "@/lib/metrics";
 import { TrendingTokenChart } from "./token-chart";
 import { TrendingControls, type SortOption } from "./trending-controls";
 import { TokenAvatar } from "@/components/token-avatar";
@@ -205,7 +206,7 @@ export default async function TrendingPage({ searchParams }: PageProps) {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2 border-white/8 bg-slate-950/70">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-white">Call Activity</h2>
@@ -257,7 +258,7 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                         </div>
                         <div>
                           <div className="text-slate-500">Avg ROI</div>
-                          <div className={`font-semibold ${topGainer.averageRoiPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          <div className={`font-semibold ${topGainer.averageRoiPct > 0 ? "text-emerald-400" : topGainer.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
                             {formatPercent(topGainer.averageRoiPct)}
                           </div>
                         </div>
@@ -322,14 +323,37 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                 </Link>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-0 table-fixed sm:min-w-[1100px]">
+              <DataTable
+                caption="Trending tokens"
+                minWidth="min-w-[590px] sm:min-w-[1100px]"
+                tableClassName="table-fixed"
+                className="rounded-none border-0 bg-transparent"
+                columns={[
+                  { className: "w-[42px] sm:w-16" },
+                  { className: "w-[190px] sm:w-56" },
+                  { className: "hidden sm:table-column" },
+                  { className: "w-[140px] sm:w-auto" },
+                  { className: "w-[100px] sm:w-auto" },
+                  { className: "hidden sm:table-column" },
+                  { className: "hidden sm:table-column" },
+                  { className: "hidden sm:table-column" },
+                  { className: "w-[110px] sm:w-auto" },
+                  { className: "hidden sm:table-column" },
+                  { className: "hidden sm:table-column" },
+                ]}
+              >
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/[0.03]">
+                    <tr>
                       {["#", "Token", "Chain", "Price", "24h", "Market Cap", "Calls", "Channels", "Avg ROI", "Best Multiple", "Last Called"].map((h) => {
                         const hiddenOnMobile = ["Chain", "Market Cap", "Calls", "Channels", "Best Multiple", "Last Called"].includes(h);
+                        const pinClass =
+                          h === "#"
+                            ? "sticky left-0 z-50 bg-slate-950 text-left"
+                            : h === "Token"
+                              ? "sticky left-[42px] z-40 bg-slate-950 text-left sm:left-16"
+                              : "";
                         return (
-                        <th key={h} className={`${hiddenOnMobile ? "hidden sm:table-cell" : ""} px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 ${h === "#" || h === "Token" || h === "Chain" ? "text-left" : "text-right"}`}>
+                        <th key={h} className={`${hiddenOnMobile ? "hidden sm:table-cell" : ""} ${pinClass} px-1.5 py-3 text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs ${h === "#" || h === "Token" || h === "Chain" ? "text-left" : "text-right"}`}>
                           {h}
                         </th>
                         );
@@ -338,35 +362,22 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                   </thead>
                   <tbody>
                     {visibleTokens.map((token, index) => (
-                      <tr key={token.id} className="border-b border-white/[0.07] transition-colors hover:bg-cyan-400/[0.045]">
-                        <td className="px-3 py-3 first:pl-4">
+                      <tr key={token.id} className="group border-b border-white/[0.07] transition-colors hover:bg-cyan-400/[0.045]">
+                        <td className="sticky left-0 z-10 bg-[#06101f] px-1.5 py-2.5 group-hover:bg-[#0b1c2a] sm:px-3 sm:py-3">
                           <span className={`inline-flex size-6 items-center justify-center text-xs font-bold ${index < 3 ? "text-yellow-300" : "text-slate-400"}`}>
                             {index + 1}
                           </span>
                         </td>
-                        <td className="px-3 py-3">
-                          <Link href={`/tokens?symbol=${token.symbol}`} className="group">
-                            <div className="flex items-center gap-3">
+                        <td className="sticky left-[9%] z-10 bg-[#06101f] px-1.5 py-2.5 group-hover:bg-[#0b1c2a] sm:px-3 sm:py-3">
+                          <Link href={`/tokens?symbol=${token.symbol}`} className="group flex min-h-11 min-w-0 items-center gap-2 sm:gap-3">
                               <TokenAvatar src={token.logoUrl} symbol={token.symbol} size={32} />
-                              <div>
-                                <div className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                              <div className="min-w-0">
+                                <div className="truncate text-xs font-semibold text-white transition-colors group-hover:text-cyan-300 sm:text-sm">
                                   {token.symbol}
                                 </div>
-                                {token.name && <div className="text-xs text-slate-500">{token.name}</div>}
+                                {token.name && <div className="truncate text-[10px] text-slate-500 sm:text-xs">{token.name}</div>}
                               </div>
-                            </div>
                           </Link>
-                          <details className="mt-2 sm:hidden">
-                            <summary className="cursor-pointer text-xs text-cyan-300 marker:text-slate-600">More token data</summary>
-                            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                              <div><dt className="text-slate-500">Chain</dt><dd className="text-slate-300">{token.chain}</dd></div>
-                              <div><dt className="text-slate-500">Calls</dt><dd className="text-slate-300">{token.totalCalls}</dd></div>
-                              <div><dt className="text-slate-500">Channels</dt><dd className="text-slate-300">{token.uniqueChannels}</dd></div>
-                              <div><dt className="text-slate-500">Market cap</dt><dd className="text-slate-300"><LiveMarketCapCell address={token.contractAddress} symbol={token.symbol} /></dd></div>
-                              <div><dt className="text-slate-500">Best multiple</dt><dd className="text-slate-300">{formatMultiple(token.bestMultiple)}</dd></div>
-                              <div><dt className="text-slate-500">Last called</dt><dd className="text-slate-300">{token.lastCalledAt ? new Date(token.lastCalledAt).toLocaleDateString() : "—"}</dd></div>
-                            </dl>
-                          </details>
                         </td>
                         <td className="hidden px-3 py-3 sm:table-cell">
                           <Link href={chainHref(normalizeChainKey(token.chain))} scroll={false}>
@@ -397,8 +408,8 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                         <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-white sm:table-cell">{token.totalCalls}</td>
                         <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-white sm:table-cell">{token.uniqueChannels}</td>
                         <td className="px-3 py-3 text-right font-mono tabular-nums">
-                          <span className={`font-semibold ${token.averageRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                            {formatPercent(token.averageRoiPct)}
+                          <span className={`font-semibold ${token.averageRoiPct > 0 ? "text-emerald-400" : token.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
+                            {formatCompactPercent(token.averageRoiPct)}
                           </span>
                         </td>
                         <td className="hidden px-3 py-3 text-right font-mono tabular-nums font-semibold text-white sm:table-cell">{formatMultiple(token.bestMultiple)}</td>
@@ -408,8 +419,7 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
+              </DataTable>
             )}
           </CardContent>
         </Card>

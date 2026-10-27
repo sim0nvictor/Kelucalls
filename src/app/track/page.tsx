@@ -105,7 +105,7 @@ function ChannelResultCard({ ch }: { ch: ChannelResult }) {
         </div>
         <div className="text-right shrink-0">
           <div className="text-xs text-slate-500">Avg ROI</div>
-          <div className={`text-lg font-semibold ${ch.averageRoiPct >= 0 ? "text-emerald-300" : "text-red-400"}`}>
+          <div className={`text-lg font-semibold ${ch.averageRoiPct > 0 ? "text-emerald-300" : ch.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
             {formatPercent(ch.averageRoiPct)}
           </div>
         </div>
@@ -211,7 +211,7 @@ function TrackedResultCard({
           <div className="flex items-center gap-1.5 text-xs text-slate-500 uppercase tracking-widest">
             <TrendingUp className="size-3" /> Avg ROI
           </div>
-          <div className={`text-2xl font-semibold ${result.averageRoiPct >= 0 ? "text-emerald-300" : "text-red-400"}`}>
+          <div className={`text-2xl font-semibold ${result.averageRoiPct > 0 ? "text-emerald-300" : result.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
             {formatPercent(result.averageRoiPct)}
           </div>
         </div>

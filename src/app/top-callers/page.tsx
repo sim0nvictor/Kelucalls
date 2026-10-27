@@ -3,8 +3,9 @@ import { Trophy, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DataTable, DataTableHeader, DataTableRow } from "@/components/ui/data-table";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
-import { formatPercent, formatCompactCurrency } from "@/lib/metrics";
+import { formatCompactPercent, formatNumber, formatPercent, formatCompactCurrency } from "@/lib/metrics";
 import { TopCallersChart } from "./callers-chart";
 import { ChannelAvatar } from "@/components/channel-avatar";
 import { siteConfig } from "@/config/site";
@@ -121,100 +122,113 @@ export default async function TopCallersPage() {
         </div>
       </div>
 
-      <Card className="border-white/8 bg-slate-950/70">
-        <CardContent className="p-6">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/8">
-                  <th className="pb-4 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+      <Card className="border-white/[0.08] bg-slate-950/30">
+        <CardContent className="p-2 sm:p-5">
+          <DataTable
+            caption="Top callers"
+            minWidth="min-w-[480px] sm:min-w-[800px]"
+            tableClassName="table-fixed"
+            className="rounded-none border-0 bg-transparent"
+            columns={[
+              { className: "w-[42px] sm:w-16" },
+              { className: "w-[180px] sm:w-56" },
+              { className: "hidden sm:table-column" },
+              { className: "w-[100px] sm:w-auto" },
+              { className: "w-[80px] sm:w-auto" },
+              { className: "w-[70px] sm:w-auto" },
+              { className: "hidden sm:table-column" },
+              { className: "hidden sm:table-column" },
+            ]}
+          >
+              <DataTableHeader>
+                  <th className="sticky left-0 z-50 bg-slate-950 px-1.5 py-3 text-center text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-left sm:text-xs">
                     Rank
                   </th>
-                  <th className="pb-4 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="sticky left-[42px] z-40 bg-slate-950 px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:left-16 sm:px-3 sm:text-xs">
                     Channel
                   </th>
-                  <th className="pb-4 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">
                     Score
                   </th>
-                  <th className="pb-4 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
                     Avg ROI
                   </th>
-                  <th className="pb-4 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Win Rate
+                  <th className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
+                    Win %
                   </th>
-                  <th className="pb-4 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
                     Calls
                   </th>
-                  <th className="pb-4 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">
                     Sim PnL
                   </th>
-                  <th className="pb-4 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">
                     10x / 100x
                   </th>
-                </tr>
-              </thead>
+              </DataTableHeader>
               <tbody>
                 {leaderboard.map((channel, index) => (
-                  <tr
+                  <DataTableRow
                     key={channel.id}
-                    className="border-b border-white/5 transition-colors hover:bg-white/5"
+                    interactive
+                    className="group"
                   >
-                    <td className="py-4">
+                    <td className="sticky left-0 z-10 bg-[#06101f] px-1.5 py-2 text-center group-hover:bg-[#0b1c2a] sm:px-3 sm:text-left">
                       <div
-                        className={`inline-flex size-8 items-center justify-center font-bold ${
+                        className={`inline-flex size-7 items-center justify-center text-xs font-bold ${
                           index === 0
-                            ? "bg-transparent text-slate-400"
+                            ? "text-amber-300"
                             : index === 1
-                              ? "bg-transparent text-slate-400"
+                              ? "text-slate-200"
                               : index === 2
-                                ? "bg-transparent text-slate-400"
-                                : "bg-transparent text-slate-400"
+                                ? "text-orange-300"
+                                : "text-slate-400"
                         }`}
                       >
                         {index + 1}
                       </div>
                     </td>
-                    <td className="py-4">
+                    <td className="sticky left-[42px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-16 sm:px-3">
                       <Link href={`/channel/${channel.slug}`} className="group">
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-h-11 min-w-0 items-center gap-2 sm:gap-3">
                           <ChannelAvatar
                             src={channel.avatarUrl}
                             title={channel.title}
-                            size={36}
+                            size={32}
                           />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="truncate text-xs font-semibold text-white transition-colors group-hover:text-cyan-300 sm:text-sm">
                                 {channel.title}
                               </span>
                               {channel.isVerified && (
-                                <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">
+                                <Badge className="hidden shrink-0 border-emerald-400/20 bg-emerald-400/10 text-emerald-200 sm:inline-flex">
                                   Verified
                                 </Badge>
                               )}
                             </div>
-                            <div className="text-xs text-slate-500">@{channel.telegramHandle}</div>
+                            <div className="truncate text-[10px] text-slate-500 sm:text-xs">@{channel.telegramHandle}</div>
                           </div>
                         </div>
                       </Link>
                     </td>
-                    <td className="py-4 text-right">
+                    <td className="hidden px-3 py-3 text-right sm:table-cell">
                       <span className="inline-flex items-center rounded-lg bg-cyan-500/10 px-2.5 py-1 text-sm font-semibold text-cyan-300">
                         {channel.rankingScore != null ? channel.rankingScore.toFixed(1) : "—"}
                       </span>
                     </td>
-                    <td className="py-4 text-right">
+                    <td className="px-1 py-2 text-right sm:px-3 sm:py-3">
                       <span
-                        className={`font-medium ${
-                          channel.averageRoiPct > 0 ? "text-emerald-400" : "text-red-400"
+                        className={`whitespace-nowrap font-mono text-xs font-medium tabular-nums sm:text-sm ${
+                          channel.averageRoiPct > 0 ? "text-emerald-400" : channel.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"
                         }`}
                       >
-                        {formatPercent(channel.averageRoiPct)}
+                        {formatCompactPercent(channel.averageRoiPct)}
                       </span>
                     </td>
-                    <td className="py-4 text-right text-white">{formatPercent(channel.winRatePct)}</td>
-                    <td className="py-4 text-right text-white">{channel.totalCalls}</td>
-                    <td className="py-4 text-right">
+                    <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatPercent(channel.winRatePct)}</td>
+                    <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(channel.totalCalls)}</td>
+                    <td className="hidden px-3 py-3 text-right sm:table-cell">
                       <span
                         className={`font-medium ${
                           channel.simulatedCurrentPnlUsd > 0 ? "text-emerald-400" : "text-red-400"
@@ -223,14 +237,13 @@ export default async function TopCallersPage() {
                         {formatCompactCurrency(channel.simulatedCurrentPnlUsd)}
                       </span>
                     </td>
-                    <td className="py-4 text-right text-white">
+                    <td className="hidden px-3 py-3 text-right text-white sm:table-cell">
                       {channel.hit10xCount} / {channel.hit100xCount}
                     </td>
-                  </tr>
+                  </DataTableRow>
                 ))}
               </tbody>
-            </table>
-          </div>
+          </DataTable>
         </CardContent>
       </Card>
     </div>

@@ -103,19 +103,31 @@ export function ChannelCard({ channel, rank }: ChannelCardProps) {
           <StatPill
             label="Avg ROI"
             value={
-              <span className={channel.averageRoiPct >= 0 ? "text-emerald-300" : "text-red-400"}>
+              <span className={channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}>
                 {formatPercent(channel.averageRoiPct)}
               </span>
             }
           />
+          <StatPill
+            label="Median ROI"
+            value={
+              <span className={
+                channel.medianRoiPct != null
+                  ? channel.medianRoiPct >= 0 ? "text-emerald-300" : "text-red-400"
+                  : "text-slate-400"
+              }>
+                {channel.medianRoiPct != null ? formatPercent(channel.medianRoiPct) : "—"}
+              </span>
+            }
+          />
           <StatPill label="Win Rate" value={formatPercent(channel.winRatePct)} />
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
           <StatPill
             label="Score"
             value={channel.rankingScore != null ? channel.rankingScore.toFixed(1) : "—"}
           />
-        </div>
-
-        <div className="grid grid-cols-3 gap-1.5">
           <StatPill
             label="Sim PnL"
             value={
@@ -125,11 +137,14 @@ export function ChannelCard({ channel, rank }: ChannelCardProps) {
             }
           />
           <StatPill label="Best ×" value={formatMultiple(channel.bestMultiple)} />
-          <StatPill
-            label="10x/100x"
-            value={`${channel.hit10xCount}/${channel.hit100xCount}`}
-          />
         </div>
+
+        {channel.bestMultiple >= 100 ? (
+          <div className="flex items-center justify-between rounded-lg border border-amber-400/20 bg-amber-500/5 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-amber-200">
+            <span>Extreme Multiple</span>
+            <span className="text-white">{formatMultiple(channel.bestMultiple)}</span>
+          </div>
+        ) : null}
 
         {/* ── Call count strip ── */}
         <div className="flex items-center rounded-lg border border-white/6 bg-white/3 px-2.5 py-1.5 text-xs">

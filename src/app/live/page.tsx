@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, DataTableHeader, DataTableRow } from "@/components/ui/data-table";
 import { getLiveCalls, getTrendingTokens, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
 import { getTokenMarketSnapshotsForTokens } from "@/lib/token-market";
-import { formatMultiple, formatPercent, formatPrice } from "@/lib/metrics";
+import { formatCompactPercent, formatMultiple, formatPrice } from "@/lib/metrics";
 import { LiveFeedTicker } from "./live-ticker";
 import { SponsoredTokenCard } from "@/components/sponsored-placement-card";
 import { TokenAvatar } from "@/components/token-avatar";
@@ -145,50 +145,56 @@ export default async function LivePage({ searchParams }: PageProps) {
                 </div>
               </div>
 
-              <DataTable caption="Recent live calls" minWidth="min-w-0 sm:min-w-[50rem]" tableClassName="table-fixed" className="rounded-xl">
+              <DataTable
+                caption="Recent live calls"
+                minWidth="min-w-[550px] sm:min-w-[50rem]"
+                tableClassName="table-fixed"
+                className="rounded-xl"
+                columns={[
+                  { className: "w-[155px] sm:w-auto" },
+                  { className: "w-[150px] sm:w-auto" },
+                  { className: "hidden sm:table-column" },
+                  { className: "w-[130px] sm:w-auto" },
+                  { className: "w-[115px] sm:w-auto" },
+                  { className: "hidden sm:table-column" },
+                  { className: "hidden sm:table-column" },
+                ]}
+              >
                 {visibleCalls.length > 0 ? (
                   <>
                     <DataTableHeader>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 first:pl-4">Token</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Channel</th>
-                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Entry</th>
-                      <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Current</th>
-                      <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">ROI</th>
-                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Peak</th>
-                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">Time</th>
+                      <th scope="col" className="sticky left-0 z-50 w-[30%] bg-slate-950 px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:w-auto sm:px-3 sm:text-xs">Token</th>
+                      <th scope="col" className="w-[27%] px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:w-auto sm:px-3 sm:text-xs">Channel</th>
+                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">Entry</th>
+                      <th scope="col" className="w-[23%] whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:w-auto sm:px-3 sm:text-xs">Current</th>
+                      <th scope="col" className="w-[20%] px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:w-auto sm:px-3 sm:text-xs">ROI</th>
+                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">Peak</th>
+                      <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">Time</th>
                     </DataTableHeader>
                     <tbody>
                       {visibleCalls.map((call) => (
-                        <DataTableRow key={call.id} interactive>
-                          <td className="px-3 py-3 first:pl-4">
-                            <Link href={`/tokens?symbol=${call.tokenSymbol}`} className="flex items-center gap-2.5 hover:text-cyan-300">
+                        <DataTableRow key={call.id} interactive className="group">
+                          <td className="sticky left-0 z-10 w-[30%] bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:w-auto sm:px-3 sm:py-3">
+                            <Link href={`/tokens?symbol=${call.tokenSymbol}`} className="flex min-h-11 min-w-0 items-center gap-1.5 hover:text-cyan-300 sm:gap-2.5">
                               <TokenAvatar src={call.tokenLogoUrl} symbol={call.tokenSymbol} size={30} />
-                              <span>
-                                <span className="block font-semibold text-white">{call.tokenSymbol}</span>
-                                <span className="flex gap-1">
+                              <span className="min-w-0">
+                                <span className="block truncate text-xs font-semibold text-white sm:text-sm">{call.tokenSymbol}</span>
+                                <span className="flex gap-0.5 sm:gap-1">
                                   {call.hit2x && <Badge className="border-emerald-400/20 bg-emerald-400/10 px-1.5 py-0 text-[10px] text-emerald-200">2x</Badge>}
                                   {call.hit10x && <Badge className="border-yellow-400/20 bg-yellow-400/10 px-1.5 py-0 text-[10px] text-yellow-200">10x</Badge>}
                                   {call.hit100x && <Badge className="border-red-400/20 bg-red-400/10 px-1.5 py-0 text-[10px] text-red-200">100x</Badge>}
                                 </span>
                               </span>
                             </Link>
-                            <details className="mt-1 sm:hidden">
-                              <summary className="cursor-pointer text-xs text-cyan-300 marker:text-slate-600">More call data</summary>
-                              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                                <div><dt className="text-slate-500">Entry</dt><dd className="text-slate-300">{formatPrice(call.entryPriceUsd)}</dd></div>
-                                <div><dt className="text-slate-500">Peak</dt><dd className="text-slate-300">{formatMultiple(call.peakMultiple)}</dd></div>
-                                <div className="col-span-2"><dt className="text-slate-500">Called</dt><dd className="text-slate-300">{new Date(call.calledAt).toLocaleString()}</dd></div>
-                              </dl>
-                            </details>
                           </td>
-                          <td className="max-w-40 px-3 py-3">
+                          <td className="max-w-40 px-1.5 py-2 text-xs sm:px-3 sm:py-3 sm:text-sm">
                             <Link href={`/channels/${call.channelSlug}`} className="block truncate text-cyan-300 hover:text-cyan-200">{call.channelTitle}</Link>
                           </td>
                           <td className="hidden px-3 py-3 text-right font-medium text-slate-300 sm:table-cell">{formatPrice(call.entryPriceUsd)}</td>
-                          <td className="px-3 py-3 text-right font-semibold text-white">
+                          <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-semibold tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">
                             <LivePriceCell address={call.contractAddress} symbol={call.tokenSymbol} fallbackPriceUsd={call.currentPriceUsd} />
                           </td>
-                          <td className={`px-3 py-3 text-right text-base font-bold ${call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>{formatPercent(call.currentRoiPct)}</td>
+                          <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{formatCompactPercent(call.currentRoiPct)}</td>
                           <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{formatMultiple(call.peakMultiple)}</td>
                           <td className="hidden whitespace-nowrap px-3 py-3 text-right text-xs text-slate-400 last:pr-4 sm:table-cell">{new Date(call.calledAt).toLocaleTimeString()}</td>
                         </DataTableRow>

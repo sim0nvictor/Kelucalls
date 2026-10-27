@@ -304,7 +304,7 @@ export default async function TokenDetailPage({ params }: PageProps) {
                   <div className="flex flex-wrap items-center gap-3 text-right">
                     <div>
                       <div className="text-xs text-slate-500">ROI</div>
-                      <div className={call.currentRoiPct >= 0 ? "text-lg font-semibold text-emerald-300" : "text-lg font-semibold text-red-400"}>
+                      <div className={call.currentRoiPct > 0 ? "text-lg font-semibold text-emerald-300" : call.currentRoiPct < 0 ? "text-lg font-semibold text-red-400" : "text-lg font-semibold text-slate-300"}>
                         {formatPercent(call.currentRoiPct)}
                       </div>
                     </div>

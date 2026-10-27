@@ -14,8 +14,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { formatCompactPercent, formatPercent, formatPrice } from "@/lib/metrics";
 import { ChainIcon } from "@/components/chain-icon";
 import { TokenAvatar } from "@/components/token-avatar";
+import { DataTable } from "@/components/ui/data-table";
 import {
   findSnapshot,
   snapshotKey,
@@ -75,19 +77,6 @@ const NUMERIC_ACCESSORS: Record<
   best: (row) => row.bestMultiple,
 };
 
-function formatPrice(value: number | null) {
-  if (value === null) return "\u2014";
-  if (value === 0) return "$0";
-
-  const abs = Math.abs(value);
-  if (abs >= 1) {
-    return "$" + value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  if (abs >= 0.01) return "$" + value.toFixed(4);
-  if (abs >= 0.000001) return "$" + value.toFixed(8);
-  return "$" + value.toExponential(2);
-}
-
 function formatCompactUsd(value: number | null) {
   if (value === null) return "\u2014";
   return new Intl.NumberFormat("en-US", {
@@ -99,12 +88,7 @@ function formatCompactUsd(value: number | null) {
 }
 
 function formatChange(value: number | null) {
-  if (value === null) return "\u2014";
-  return (value >= 0 ? "+" : "") + value.toFixed(2) + "%";
-}
-
-function formatRoi(value: number) {
-  return (value >= 0 ? "+" : "") + value.toFixed(1) + "%";
+  return value === null ? "\u2014" : formatPercent(value);
 }
 
 function formatMultiple(value: number) {
@@ -348,12 +332,18 @@ useEffect(() => {
     );
   };
 
-  const headerButton = (key: SortKey, label: string, align: "left" | "right" = "right") => (
+  const headerButton = (
+    key: SortKey,
+    label: string,
+    align: "left" | "right" = "right",
+    className = ""
+  ) => (
     <th
       key={key}
       className={
-        "pb-4 text-xs font-medium uppercase tracking-wider text-slate-500 " +
-        (align === "left" ? "text-left" : "text-right")
+        "px-2 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs " +
+        (align === "left" ? "text-left" : "text-right") +
+        " " + className
       }
     >
       <button
@@ -481,8 +471,8 @@ useEffect(() => {
       </div>
 
       {/* Full market table */}
-      <div className="rounded-2xl border border-white/8 bg-slate-950/70 p-6">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
+      <div className="rounded-xl border border-white/[0.08] bg-slate-950/30 p-3 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-semibold text-white">
             {query.trim() === ""
               ? "All " + rows.length + " tracked tokens"
@@ -499,24 +489,42 @@ useEffect(() => {
             No tokens match that search yet.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1024px]">
+          <DataTable
+            caption="Live token market"
+            minWidth="min-w-[500px] sm:min-w-[1024px]"
+            tableClassName="table-fixed"
+            className="rounded-none border-0 bg-transparent"
+            columns={[
+              { className: "w-[180px] sm:w-auto" },
+              { className: "hidden sm:table-column" },
+              { className: "w-[125px] sm:w-auto" },
+              { className: "hidden sm:table-column" },
+              { className: "w-[95px] sm:w-auto" },
+              { className: "hidden sm:table-column" },
+              { className: "hidden sm:table-column" },
+              { className: "hidden sm:table-column" },
+              { className: "hidden sm:table-column" },
+              { className: "hidden sm:table-column" },
+              { className: "w-[100px] sm:w-auto" },
+              { className: "hidden sm:table-column" },
+            ]}
+          >
               <thead>
-                <tr className="border-b border-white/8">
-                  {headerButton("symbol", "Token", "left")}
-                  <th className="pb-4 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                <tr>
+                  {headerButton("symbol", "Token", "left", "sticky left-0 z-40 bg-slate-950")}
+                  <th className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">
                     Chain
                   </th>
                   {headerButton("price", "Price")}
-                  {headerButton("change1h", "1h")}
+                  {headerButton("change1h", "1h", "right", "hidden sm:table-cell")}
                   {headerButton("change24h", "24h")}
-                  {headerButton("marketCap", "Market cap")}
-                  {headerButton("volume", "24h vol")}
-                  {headerButton("liquidity", "Liquidity")}
-                  {headerButton("calls", "Calls")}
-                  {headerButton("channels", "Channels")}
+                  {headerButton("marketCap", "Market cap", "right", "hidden sm:table-cell")}
+                  {headerButton("volume", "24h vol", "right", "hidden sm:table-cell")}
+                  {headerButton("liquidity", "Liquidity", "right", "hidden sm:table-cell")}
+                  {headerButton("calls", "Calls", "right", "hidden sm:table-cell")}
+                  {headerButton("channels", "Channels", "right", "hidden sm:table-cell")}
                   {headerButton("roi", "Avg ROI")}
-                  {headerButton("best", "Best")}
+                  {headerButton("best", "Best", "right", "hidden sm:table-cell")}
                 </tr>
               </thead>
               <tbody>
@@ -527,28 +535,28 @@ useEffect(() => {
                   return (
                     <tr
                       key={row.id}
-                      className="border-b border-white/5 transition-colors hover:bg-white/5"
+                      className="group border-b border-white/[0.07] transition-colors hover:bg-cyan-400/[0.045]"
                     >
-                      <td className="py-4">
-                        <Link href={tokenHref(row)} className="group flex items-center gap-3">
+                      <td className="sticky left-0 z-10 bg-[#06101f] px-2 py-2.5 group-hover:bg-[#0b1c2a] sm:px-3 sm:py-3">
+                        <Link href={tokenHref(row)} className="group flex min-h-11 min-w-0 items-center gap-2 sm:gap-3">
                           <TokenAvatar src={row.logoUrl} symbol={row.symbol} size={32} />
-                          <div>
-                            <div className="flex items-center gap-1.5 font-semibold text-white transition-colors group-hover:text-purple-300">
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-1.5 truncate font-semibold text-white transition-colors group-hover:text-purple-300">
                               {row.symbol}
                               {row.isLive && (
                                 <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden />
                               )}
                             </div>
-                            {row.name && <div className="text-xs text-slate-500">{row.name}</div>}
+                            {row.name && <div className="truncate text-xs text-slate-500">{row.name}</div>}
                           </div>
                         </Link>
                       </td>
-                      <td className="py-4">
+                      <td className="hidden px-3 py-3 sm:table-cell">
                         <ChainIcon chain={row.chain} size={20} showLabel />
                       </td>
                       <td
                         className={
-                          "py-4 text-right font-medium transition-colors duration-500 " +
+                          "px-1 py-2.5 text-right font-mono text-xs font-medium tabular-nums transition-colors duration-500 sm:px-3 sm:py-3 sm:text-sm " +
                           (pulse === "up"
                             ? "text-emerald-300"
                             : pulse === "down"
@@ -558,40 +566,39 @@ useEffect(() => {
                       >
                         {formatPrice(row.priceUsd)}
                       </td>
-                      <td className={"py-4 text-right " + changeTone(row.change1h)}>
+                      <td className={"hidden px-3 py-3 text-right sm:table-cell " + changeTone(row.change1h)}>
                         {formatChange(row.change1h)}
                       </td>
-                      <td className={"py-4 text-right font-medium " + changeTone(row.change24h)}>
+                      <td className={"px-1 py-2.5 text-right font-mono text-xs font-medium tabular-nums sm:px-3 sm:py-3 sm:text-sm " + changeTone(row.change24h)}>
                         {formatChange(row.change24h)}
                       </td>
-                      <td className="py-4 text-right text-white">
+                      <td className="hidden px-3 py-3 text-right text-white sm:table-cell">
                         {formatCompactUsd(row.marketCapUsd)}
                       </td>
-                      <td className="py-4 text-right text-slate-300">
+                      <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">
                         {formatCompactUsd(row.volume24hUsd)}
                       </td>
-                      <td className="py-4 text-right text-slate-300">
+                      <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">
                         {formatCompactUsd(row.liquidityUsd)}
                       </td>
-                      <td className="py-4 text-right text-white">{row.totalCalls}</td>
-                      <td className="py-4 text-right text-white">{row.uniqueChannels}</td>
+                      <td className="hidden px-3 py-3 text-right text-white sm:table-cell">{row.totalCalls}</td>
+                      <td className="hidden px-3 py-3 text-right text-white sm:table-cell">{row.uniqueChannels}</td>
                       <td
                         className={
-                          "py-4 text-right font-medium " +
-                          (row.averageRoiPct > 0 ? "text-emerald-400" : "text-red-400")
+                          "px-1 py-2.5 text-right font-mono text-xs font-medium tabular-nums sm:px-3 sm:py-3 sm:text-sm " +
+                          (row.averageRoiPct > 0 ? "text-emerald-400" : row.averageRoiPct < 0 ? "text-red-400" : "text-slate-300")
                         }
                       >
-                        {formatRoi(row.averageRoiPct)}
+                        {formatCompactPercent(row.averageRoiPct)}
                       </td>
-                      <td className="py-4 text-right font-medium text-purple-300">
+                      <td className="hidden px-3 py-3 text-right font-medium text-purple-300 sm:table-cell">
                         {formatMultiple(row.bestMultiple)}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+          </DataTable>
         )}
       </div>
     </div>

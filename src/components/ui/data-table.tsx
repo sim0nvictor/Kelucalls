@@ -15,6 +15,7 @@ type DataTableProps = {
   className?: string;
   tableClassName?: string;
   minWidth?: string;
+  columns?: Array<{ className?: string; width?: string }>;
 };
 
 export function DataTable({
@@ -23,11 +24,23 @@ export function DataTable({
   className,
   tableClassName,
   minWidth = "min-w-[42rem]",
+  columns,
 }: DataTableProps) {
   return (
-    <div className={cn("w-full overflow-x-auto rounded-lg border border-white/10 bg-slate-950/35", className)}>
-      <table className={cn("w-full border-collapse text-left text-sm", minWidth, tableClassName)}>
+    <div className={cn("max-h-[70vh] w-full overflow-x-auto overflow-y-auto rounded-xl border border-white/[0.08] bg-slate-950/25", className)}>
+      <table className={cn("kc-data-table w-full border-collapse text-left text-sm", minWidth, tableClassName)}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
+        {columns ? (
+          <colgroup>
+            {columns.map((column, index) => (
+              <col
+                key={index}
+                className={column.className}
+                style={column.width ? { width: column.width } : undefined}
+              />
+            ))}
+          </colgroup>
+        ) : null}
         {children}
       </table>
     </div>
@@ -153,10 +166,11 @@ export function PerformanceValue({
   className?: string;
 }) {
   const formatted = kind === "currency" ? formatCompactCurrency(value ?? 0) : formatPercent(value ?? 0);
-  const isPositive = (value ?? 0) >= 0;
+  const isPositive = (value ?? 0) > 0;
+  const isNegative = (value ?? 0) < 0;
 
   return (
-    <span className={cn("font-mono tabular-nums", isPositive ? "text-emerald-300" : "text-red-300", className)}>
+    <span className={cn("font-mono tabular-nums", isPositive ? "text-emerald-300" : isNegative ? "text-red-300" : "text-slate-300", className)}>
       {formatted}
     </span>
   );
@@ -182,7 +196,7 @@ export function ChannelIdentity({
     <span className={cn("flex min-w-0 items-center gap-3", className)}>
       <ChannelAvatar src={avatarUrl ?? null} title={title} size={32} />
       <span className="min-w-0">
-        <span className="block truncate font-medium text-white">{title}</span>
+        <span className="block truncate font-semibold text-white">{title}</span>
         {description ? <span className="block truncate text-xs text-slate-500">{description}</span> : null}
       </span>
     </span>

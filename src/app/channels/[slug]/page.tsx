@@ -4,8 +4,10 @@ import type { Metadata } from "next";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { DataTable, DataTableHeader, DataTableRow } from "@/components/ui/data-table";
 import { JsonLd } from "@/components/json-ld";
 import { getChannelDetail } from "@/lib/dashboard-data";
+import { formatPercent } from "@/lib/metrics";
 import {
   breadcrumbSchema,
   channelDatasetSchema,
@@ -26,7 +28,7 @@ const usd = new Intl.NumberFormat("en-US", {
 });
 
 function pct(value: number) {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+  return formatPercent(value);
 }
 
 export async function generateMetadata({
@@ -70,6 +72,7 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
     { label: "Tracked calls", value: channel.totalCalls.toLocaleString() },
     { label: "Win rate", value: `${channel.winRatePct.toFixed(1)}%` },
     { label: "Average ROI", value: pct(channel.averageRoiPct) },
+    { label: "Median ROI", value: channel.medianRoiPct !== null ? pct(channel.medianRoiPct) : "—" },
     { label: "Best multiple", value: `${channel.bestMultiple.toFixed(2)}x` },
     { label: "Simulated PnL", value: usd.format(channel.simulatedCurrentPnlUsd) },
     { label: "2x / 10x / 100x", value: `${channel.hit2xCount} / ${channel.hit10xCount} / ${channel.hit100xCount}` },
@@ -168,20 +171,27 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
             call, it will appear here automatically.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-white/5 text-xs uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Token</th>
-                  <th className="px-4 py-3">Called</th>
-                  <th className="px-4 py-3">Current ROI</th>
-                  <th className="px-4 py-3">Peak multiple</th>
-                </tr>
-              </thead>
+          <DataTable
+            caption={`${channel.title} recent calls`}
+            minWidth="min-w-[460px] sm:min-w-[38rem]"
+            columns={[
+              { className: "w-[120px] sm:w-auto" },
+              { className: "w-[120px] sm:w-auto" },
+              { className: "w-[120px] sm:w-auto" },
+              { className: "w-[100px] sm:w-auto" },
+            ]}
+            className="rounded-2xl"
+          >
+              <DataTableHeader>
+                <th scope="col" className="sticky left-0 z-40 bg-slate-950 px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:text-xs">Token</th>
+                <th scope="col" className="px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:text-xs">Called</th>
+                <th scope="col" className="px-2 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:text-xs">Current ROI</th>
+                <th scope="col" className="px-2 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:text-xs">Peak</th>
+              </DataTableHeader>
               <tbody>
                 {recentCalls.map((call) => (
-                  <tr key={call.id} className="border-t border-white/5">
-                    <td className="px-4 py-3 font-medium text-white">
+                  <DataTableRow key={call.id}>
+                    <td className="sticky left-0 z-10 bg-[#06101f] px-2 py-3 font-medium text-white sm:px-4">
                       {call.contractAddress ? (
                         <Link
                           href={`/tokens/${encodeURIComponent(call.contractAddress)}`}
@@ -193,7 +203,7 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
                         call.tokenSymbol
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-400">
+                    <td className="px-2 py-3 text-xs text-slate-400 sm:px-4 sm:text-sm">
                       <time dateTime={call.calledAt}>
                         {new Date(call.calledAt).toLocaleDateString("en-US", {
                           year: "numeric",
@@ -203,18 +213,17 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
                       </time>
                     </td>
                     <td
-                      className={`px-4 py-3 ${call.currentRoiPct >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+                      className={`px-2 py-3 text-right font-mono text-xs tabular-nums sm:px-4 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-300" : call.currentRoiPct < 0 ? "text-rose-300" : "text-slate-300"}`}
                     >
                       {pct(call.currentRoiPct)}
                     </td>
-                    <td className="px-4 py-3 text-slate-300">
+                    <td className="px-2 py-3 text-right font-mono text-xs tabular-nums text-slate-300 sm:px-4 sm:text-sm">
                       {call.peakMultiple.toFixed(2)}x
                     </td>
-                  </tr>
+                  </DataTableRow>
                 ))}
               </tbody>
-            </table>
-          </div>
+          </DataTable>
         )}
 
         {channel.refreshedAt && (

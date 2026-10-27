@@ -10,14 +10,12 @@ import {
   DataTable,
   DataTableHeader,
   DataTableRow,
-  MetricValue,
   PerformanceValue,
   StatusBadge,
   TokenIdentity,
-  VerificationBadge,
 } from "@/components/ui/data-table";
 import { getDashboardSnapshot, getSponsoredTokenPlacements } from "@/lib/dashboard-data";
-import { formatCompactCurrency, formatMultiple, formatPercent } from "@/lib/metrics";
+import { formatCompactCurrency, formatCompactPercent, formatMultiple, formatNumber, formatPercent } from "@/lib/metrics";
 import type { RankingMode } from "@/types/kelucalls";
 import { SponsoredPlacementCard } from "@/components/sponsored-placement-card";
 import { siteConfig } from "@/config/site";
@@ -101,22 +99,35 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <p className="mt-1 text-sm text-slate-400">Most-called tokens across tracked channels.</p>
           </div>
         </div>
-        <DataTable caption="Trending tokens" minWidth="min-w-0 sm:min-w-[38rem]" tableClassName="table-fixed">
+        <DataTable
+          caption="Trending tokens"
+          minWidth="min-w-[450px] sm:min-w-[38rem]"
+          tableClassName="table-fixed"
+          columns={[
+            { className: "w-[180px] sm:w-auto" },
+            { className: "w-[110px] sm:w-auto" },
+            { className: "w-[80px] sm:w-auto" },
+            { className: "w-[80px] sm:w-auto" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+          ]}
+        >
           <DataTableHeader>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 first:pl-4">Token</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">ROI</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Calls</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Channels</th>
-            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Chain</th>
+            <th scope="col" className="sticky left-0 z-40 bg-slate-950 px-1.5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Token</th>
+            <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">ROI</th>
+            <th scope="col" className="px-1 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Calls</th>
+            <th scope="col" className="px-1 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Channels</th>
+            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">Chain</th>
             <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Best</th>
             <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">Last called</th>
           </DataTableHeader>
           <tbody>{snapshot.trendingTokens.map((token) => (
-            <DataTableRow key={token.id} interactive>
-              <td className="px-3 py-3 first:pl-4"><TokenIdentity href={`/tokens?symbol=${token.symbol}`} symbol={token.symbol} name={token.name} logoUrl={token.logoUrl} chain={token.chain} /></td>
-              <td className="px-3 py-3 text-right"><MetricValue value={<PerformanceValue value={token.averageRoiPct} />} /></td>
-              <td className="px-3 py-3 text-right"><MetricValue value={token.totalCalls} /></td>
-              <td className="px-3 py-3 text-right"><MetricValue value={token.uniqueChannels} /></td>
+            <DataTableRow key={token.id} interactive className="group">
+              <td className="sticky left-0 z-10 w-[40%] bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:w-auto sm:px-3 sm:py-3"><TokenIdentity href={`/tokens?symbol=${token.symbol}`} symbol={token.symbol} name={token.name} logoUrl={token.logoUrl} chain={token.chain} className="min-h-11 gap-2" /></td>
+              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={token.averageRoiPct > 0 ? "text-emerald-300" : token.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{formatCompactPercent(token.averageRoiPct)}</span></td>
+              <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(token.totalCalls)}</td>
+              <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(token.uniqueChannels)}</td>
               <td className="hidden px-3 py-3 text-left text-slate-300 sm:table-cell">{token.chain}</td>
               <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">{formatMultiple(token.bestMultiple)}</td>
               <td className="hidden px-3 py-3 text-right text-xs text-slate-500 last:pr-4 sm:table-cell">{token.lastCalledAt ? new Date(token.lastCalledAt).toLocaleString() : "—"}</td>
@@ -127,23 +138,36 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section className="space-y-4">
         <div className="flex items-center gap-2"><Radio className="size-5 text-cyan-300" /><div><h2 className="text-2xl font-semibold text-white">Live Calls</h2><p className="mt-1 text-sm text-slate-400">Recent calls with live ROI and breakout detection.</p></div></div>
-        <DataTable caption="Live calls" minWidth="min-w-0 sm:min-w-[52rem]" tableClassName="table-fixed">
+        <DataTable
+          caption="Live calls"
+          minWidth="min-w-[550px] sm:min-w-[52rem]"
+          tableClassName="table-fixed"
+          columns={[
+            { className: "w-[155px] sm:w-auto" },
+            { className: "w-[150px] sm:w-auto" },
+            { className: "hidden sm:table-column" },
+            { className: "w-[130px] sm:w-auto" },
+            { className: "w-[115px] sm:w-auto" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+          ]}
+        >
           <DataTableHeader>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 first:pl-4">Token</th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Channel</th>
+            <th scope="col" className="sticky left-0 z-40 bg-slate-950 px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Token</th>
+            <th scope="col" className="px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Channel</th>
             <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Entry</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Current</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">ROI</th>
+            <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Current</th>
+            <th scope="col" className="px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">ROI</th>
             <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Peak</th>
             <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">Time</th>
           </DataTableHeader>
           <tbody>{snapshot.liveCalls.map((call) => (
-            <DataTableRow key={call.id} interactive>
-              <td className="px-3 py-3 first:pl-4"><Link href={`/tokens?symbol=${call.tokenSymbol}`} className="font-semibold text-white hover:text-cyan-300">{call.tokenSymbol}</Link><details className="mt-1 sm:hidden"><summary className="cursor-pointer text-xs text-cyan-300 marker:text-slate-600">More call data</summary><dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs"><div><dt className="text-slate-500">Entry</dt><dd className="text-slate-300">{formatTablePrice(call.entryPriceUsd)}</dd></div><div><dt className="text-slate-500">Peak</dt><dd className="text-slate-300">{formatMultiple(call.peakMultiple)}</dd></div><div className="col-span-2"><dt className="text-slate-500">Called</dt><dd className="text-slate-300">{new Date(call.calledAt).toLocaleString()}</dd></div></dl></details></td>
-              <td className="max-w-44 px-3 py-3"><Link href={`/channels/${call.channelSlug}`} className="block truncate text-cyan-300 hover:text-cyan-200">{call.channelTitle}</Link></td>
+            <DataTableRow key={call.id} interactive className="group">
+              <td className="sticky left-0 z-10 w-[30%] bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:w-auto sm:px-3 sm:py-3"><Link href={`/tokens?symbol=${call.tokenSymbol}`} className="flex min-h-11 min-w-0 items-center truncate text-xs font-semibold text-white hover:text-cyan-300 sm:text-sm">{call.tokenSymbol}</Link></td>
+              <td className="max-w-44 px-1.5 py-2 text-xs sm:px-3 sm:py-3 sm:text-sm"><Link href={`/channels/${call.channelSlug}`} className="block truncate text-cyan-300 hover:text-cyan-200">{call.channelTitle}</Link></td>
               <td className="hidden px-3 py-3 text-right font-medium text-slate-300 sm:table-cell">{formatTablePrice(call.entryPriceUsd)}</td>
-              <td className="px-3 py-3 text-right font-medium text-white">{formatTablePrice(call.currentPriceUsd)}</td>
-              <td className={`px-3 py-3 text-right text-base font-bold ${call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>{formatPercent(call.currentRoiPct)}</td>
+              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-medium tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatTablePrice(call.currentPriceUsd)}</td>
+              <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{formatCompactPercent(call.currentRoiPct)}</td>
               <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{formatMultiple(call.peakMultiple)}</td>
               <td className="hidden whitespace-nowrap px-3 py-3 text-right text-xs text-slate-400 last:pr-4 sm:table-cell">{new Date(call.calledAt).toLocaleTimeString()}</td>
             </DataTableRow>
@@ -156,24 +180,38 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <div><Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-200">Leaderboard</Badge><h2 className="mt-3 text-2xl font-semibold text-white">Channel Leaderboard</h2><p className="mt-1 text-sm text-slate-400">Ranked by the selected trust model, excluding paid placements.</p></div>
           <div className="flex flex-wrap gap-2">{rankingModes.map((mode) => <Link key={mode.value} href={`/?ranking=${mode.value}`}><Button variant={rankingMode === mode.value ? "default" : "secondary"} size="sm">{mode.label}</Button></Link>)}</div>
         </div>
-        <DataTable caption="Channel leaderboard" minWidth="min-w-0 sm:min-w-[56rem]" tableClassName="table-fixed">
+        <DataTable
+          caption="Channel leaderboard"
+          minWidth="min-w-[500px] sm:min-w-[56rem]"
+          tableClassName="table-fixed"
+          columns={[
+            { className: "w-[42px] sm:w-16" },
+            { className: "w-[180px] sm:w-56" },
+            { className: "w-[70px] sm:w-auto" },
+            { className: "w-[90px] sm:w-auto" },
+            { className: "w-[110px] sm:w-auto" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
+          ]}
+        >
           <DataTableHeader>
-            <th scope="col" className="w-14 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 first:pl-4">Rank</th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Channel</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Calls</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Win Rate</th>
-            <th scope="col" className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Avg ROI</th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">Best</th>
-            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">PnL</th>
-            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 last:pr-4 sm:table-cell">Status</th>
+            <th scope="col" className="sticky left-0 z-50 bg-slate-950 px-1 py-3 text-center text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-left sm:text-xs">Rank</th>
+            <th scope="col" className="sticky left-[42px] z-40 bg-slate-950 px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:left-16 sm:px-3 sm:text-xs">Channel</th>
+            <th scope="col" className="px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Calls</th>
+            <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Win %</th>
+            <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Avg ROI</th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">Best</th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">PnL</th>
+            <th scope="col" className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 last:pr-4 sm:table-cell">Status</th>
           </DataTableHeader>
           <tbody>{snapshot.leaderboard.slice(0, 6).map((channel, index) => (
-            <DataTableRow key={channel.id} interactive>
-              <td className="px-3 py-3 first:pl-4"><span className={index < 3 ? "font-semibold text-yellow-300" : "font-semibold text-slate-400"}>#{index + 1}</span></td>
-              <td className="px-3 py-3"><ChannelIdentity href={`/channels/${channel.slug}`} title={channel.title} avatarUrl={channel.avatarUrl} description={channel.description} /><div className="mt-1 sm:hidden"><VerificationBadge verified={channel.isVerified} /></div></td>
-              <td className="px-3 py-3 text-right"><MetricValue value={channel.totalCalls} /></td>
-              <td className="px-3 py-3 text-right"><PerformanceValue value={channel.winRatePct} /></td>
-              <td className="px-3 py-3 text-right"><PerformanceValue value={channel.averageRoiPct} /></td>
+            <DataTableRow key={channel.id} interactive className="group">
+              <td className="sticky left-0 z-10 bg-[#06101f] px-1 py-2 text-center group-hover:bg-[#0b1c2a] sm:px-3 sm:text-left"><span className={index < 3 ? `font-semibold tabular-nums ${["text-amber-300", "text-slate-200", "text-orange-300"][index]}` : "font-semibold tabular-nums text-slate-400"}>#{index + 1}</span></td>
+              <td className="sticky left-[42px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-16 sm:px-3 sm:py-3"><ChannelIdentity href={`/channels/${channel.slug}`} title={channel.title} avatarUrl={channel.avatarUrl} description={`Telegram · ${formatNumber(channel.totalCalls)} calls`} className="min-h-11 gap-2" /></td>
+              <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(channel.totalCalls)}</td>
+              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><PerformanceValue value={channel.winRatePct} /></td>
+              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{formatCompactPercent(channel.averageRoiPct)}</span></td>
               <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">{formatMultiple(channel.bestMultiple)}</td>
               <td className="hidden px-3 py-3 text-right sm:table-cell"><PerformanceValue value={channel.simulatedCurrentPnlUsd} kind="currency" /></td>
               <td className="hidden px-3 py-3 text-left last:pr-4 sm:table-cell"><StatusBadge status={channel.status} /></td>

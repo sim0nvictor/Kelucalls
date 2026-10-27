@@ -133,6 +133,7 @@ function mapChannelSummary(row: ChannelRow): ChannelSummary {
     simulatedInvestmentUsd:   toNumber(stats.simulated_investment_usd),
     simulatedCurrentValueUsd: toNumber(stats.simulated_current_value_usd),
     simulatedCurrentPnlUsd:   toNumber(stats.simulated_current_pnl_usd),
+    medianRoiPct:              stats.median_roi_pct !== undefined && stats.median_roi_pct !== null ? toNumber(stats.median_roi_pct) : null,
     simulatedPeakPnlUsd:      toNumber(stats.simulated_peak_pnl_usd),
     refreshedAt:              typeof stats.refreshed_at === "string" ? stats.refreshed_at : null,
    
@@ -273,6 +274,7 @@ export async function getLeaderboard(rankingMode: RankingMode = "smart", limit?:
           simulated_current_pnl_usd,
           simulated_peak_pnl_usd,
           ranking_score,
+          median_roi_pct,
           refreshed_at
         )
       `)

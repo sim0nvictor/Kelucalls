@@ -90,21 +90,23 @@ function findProjectRoot(startDir) {
   }
 }
 
-export function loadWorkerEnv(importMetaUrl) {
+export function loadWorkerEnv(importMetaUrl, { loadDotenvFiles = true } = {}) {
   const workerDir = path.dirname(fileURLToPath(importMetaUrl));
   const projectRoot = findProjectRoot(workerDir);
   const envPath = path.join(projectRoot, ".env");
   const localEnvPath = path.join(projectRoot, ".env.local");
+  const envExists = loadDotenvFiles ? fs.existsSync(envPath) : undefined;
+  const localEnvExists = loadDotenvFiles ? fs.existsSync(localEnvPath) : undefined;
 
-  if (fs.existsSync(envPath)) dotenv.config({ path: envPath, quiet: true });
-  if (fs.existsSync(localEnvPath)) dotenv.config({ path: localEnvPath, override: false, quiet: true });
+  if (envExists) dotenv.config({ path: envPath, quiet: true });
+  if (localEnvExists) dotenv.config({ path: localEnvPath, override: false, quiet: true });
 
   return {
     projectRoot,
     envPath,
-    envExists: fs.existsSync(envPath),
+    envExists,
     localEnvPath,
-    localEnvExists: fs.existsSync(localEnvPath)
+    localEnvExists
   };
 }
 

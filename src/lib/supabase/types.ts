@@ -128,6 +128,28 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["calls"]["Insert"]>;
       };
 
+      token_price_observations: {
+        Row: {
+          id: string;
+          token_id: string;
+          price_usd: number;
+          market_cap_usd: number | null;
+          observed_at: string;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          token_id: string;
+          price_usd: number;
+          market_cap_usd?: number | null;
+          observed_at: string;
+          source?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["token_price_observations"]["Insert"]>;
+      };
+
       call_metrics: {
         Row: {
           call_id: string;

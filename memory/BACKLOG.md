@@ -345,3 +345,11 @@ For every item:
 | BL-006 | Token chart performance       | pending |
 | BL-007 | Table/mobile organization     | pending |
 | BL-008 | npm lint errors               | done    |
+
+---
+
+# In solving ## BL-004 — Channel Average ROI / Ranking Distribution
+
+### Important for solving BL-004.
+
+Go through docs\measurement-migration.md to understand a clear picture of what must be done in oreder to get what is the best approache in solving ## BL -004-Channel Average ROI/Ranking Distribbution

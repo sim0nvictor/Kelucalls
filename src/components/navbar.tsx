@@ -144,7 +144,7 @@ export function SearchBox({ onNavigate }: { onNavigate?: () => void; mobile?: bo
                     <div className="font-medium text-white">{ch.title}</div>
                     <div className="text-xs text-slate-500">{ch.telegramHandle} · {ch.totalCalls} calls</div>
                   </div>
-                  <div className={`text-xs font-semibold ${ch.averageRoiPct >= 0 ? "text-emerald-300" : "text-red-400"}`}>
+                  <div className={`text-xs font-semibold ${ch.averageRoiPct > 0 ? "text-emerald-300" : ch.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
                     {formatPercent(ch.averageRoiPct)}
                   </div>
                 </Link>
