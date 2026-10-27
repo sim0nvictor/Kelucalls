@@ -28,6 +28,7 @@ prisma/dev.db-journal
 *.sw?
 .next
 node_modules
+test-results/
 .env
 .env.local
 tsconfig.tsbuildinfo
