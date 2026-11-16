@@ -75,6 +75,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
           ]}
           className="self-start -mx-4 w-[calc(100%+2rem)] rounded-none border-x-0 border-y border-white/[0.08] bg-slate-950/20 sm:mx-0 sm:w-full sm:rounded-lg sm:border"
         >
