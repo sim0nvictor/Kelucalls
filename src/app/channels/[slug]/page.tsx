@@ -71,8 +71,8 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
   const stats = [
     { label: "Tracked calls", value: channel.totalCalls.toLocaleString() },
     { label: "Win rate", value: `${channel.winRatePct.toFixed(1)}%` },
-    { label: "Average ROI", value: pct(channel.averageRoiPct) },
-    { label: "Median ROI", value: channel.medianRoiPct !== null ? pct(channel.medianRoiPct) : "—" },
+    { label: "Median ROI · typical call", value: channel.medianRoiPct !== null ? pct(channel.medianRoiPct) : "—" },
+    { label: "Average ROI · raw average", value: pct(channel.averageRoiPct) },
     { label: "Best multiple", value: `${channel.bestMultiple.toFixed(2)}x` },
     { label: "Simulated PnL", value: usd.format(channel.simulatedCurrentPnlUsd) },
     { label: "2x / 10x / 100x", value: `${channel.hit2xCount} / ${channel.hit10xCount} / ${channel.hit100xCount}` },
@@ -161,6 +161,10 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
           </Card>
         ))}
       </section>
+
+      <p className="-mt-4 text-xs leading-6 text-slate-500">
+        Median ROI represents the middle result across calls with valid entry and current-price data, so extreme winners have less influence on it. Average ROI preserves the arithmetic average of the stored call results. The two figures can use different eligible call counts; neither changes the underlying call records or ranking formula.
+      </p>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-2xl font-semibold text-white">Recent calls</h2>

@@ -193,6 +193,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
           ]}
         >
           <DataTableHeader>
@@ -201,6 +202,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <th scope="col" className="px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Calls</th>
             <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Win %</th>
             <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Avg ROI</th>
+            <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">Median ROI</th>
             <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">Best</th>
             <th scope="col" className="hidden px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 sm:table-cell">PnL</th>
             <th scope="col" className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 last:pr-4 sm:table-cell">Status</th>
@@ -212,6 +214,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(channel.totalCalls)}</td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><PerformanceValue value={channel.winRatePct} /></td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{formatCompactPercent(channel.averageRoiPct)}</span></td>
+              <td className="hidden px-3 py-3 text-right font-mono text-sm tabular-nums sm:table-cell"><span className={channel.medianRoiPct !== null && channel.medianRoiPct > 0 ? "text-emerald-300" : channel.medianRoiPct !== null && channel.medianRoiPct < 0 ? "text-red-300" : "text-slate-400"}>{channel.medianRoiPct !== null ? formatCompactPercent(channel.medianRoiPct) : "—"}</span></td>
               <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">{formatMultiple(channel.bestMultiple)}</td>
               <td className="hidden px-3 py-3 text-right sm:table-cell"><PerformanceValue value={channel.simulatedCurrentPnlUsd} kind="currency" /></td>
               <td className="hidden px-3 py-3 text-left last:pr-4 sm:table-cell"><StatusBadge status={channel.status} /></td>

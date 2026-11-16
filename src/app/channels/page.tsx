@@ -75,6 +75,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
           ]}
           className="self-start -mx-4 w-[calc(100%+2rem)] rounded-none border-x-0 border-y border-white/[0.08] bg-slate-950/20 sm:mx-0 sm:w-full sm:rounded-lg sm:border"
         >
@@ -96,6 +97,9 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
             </th>
             <th scope="col" className="sticky z-30 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
               Avg ROI
+            </th>
+            <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
+              Median ROI
             </th>
             <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               Avg Multiple
@@ -152,6 +156,11 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
                 <td className="px-1.5 py-2 text-right sm:px-3 sm:py-3">
                   <span className={`whitespace-nowrap font-mono text-xs tabular-nums sm:text-sm ${channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}`}>
                     {formatCompactPercent(channel.averageRoiPct)}
+                  </span>
+                </td>
+                <td className="hidden px-3 py-3 text-right font-mono text-sm tabular-nums sm:table-cell">
+                  <span className={channel.medianRoiPct !== null && channel.medianRoiPct > 0 ? "text-emerald-300" : channel.medianRoiPct !== null && channel.medianRoiPct < 0 ? "text-red-300" : "text-slate-400"}>
+                    {channel.medianRoiPct !== null ? formatCompactPercent(channel.medianRoiPct) : "—"}
                   </span>
                 </td>
                 <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">
