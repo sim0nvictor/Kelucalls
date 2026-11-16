@@ -1005,3 +1005,40 @@ The required configuration is one URL (`SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_U
 - The no-dotenv option is explicit and scoped to the price worker; passing the flag while omitting required variables will still cause startup failure without reading files.
 - A successful one-cycle process is not proof of complete backlog recovery; the 500-candidate selector limitation remains unchanged.
 - Trending and scraper still load dotenv files and are not enabled for no-dotenv execution by this change.
+
+
+---
+
+## UI Phase — Median ROI Performance Representation — 2026-11-16
+
+### Objective
+
+Make typical channel performance visible alongside the preserved raw arithmetic average. This is a presentation change only; it does not redefine call outcomes or ranking inputs.
+
+### Findings
+
+- The homepage channel leaderboard displayed Average ROI but omitted the already-available Median ROI field.
+- The full channel rankings page displayed Average ROI but omitted Median ROI.
+- Channel detail pages already displayed both metrics, but listed Average ROI first and did not explain why the two can differ.
+- Live Supabase inspection confirmed migration 022's `get_stale_open_calls(integer)` function is present. This UI phase does not modify the database.
+- For Traders Gamble, the stored channel summary showed a very large positive average alongside a negative median. The live aggregation function calculates the average from all non-null stored ROI values, while its median uses calls with valid positive entry and current prices. These populations can differ.
+
+### Changes
+
+- Added a Median ROI column to the homepage leaderboard, preserving the existing Average ROI column.
+- Added a Median ROI column to the full channel rankings table, preserving Average ROI and all existing columns.
+- Reordered channel detail metrics so Median ROI (typical call) is presented before Average ROI (raw average).
+- Added explanatory copy that median is less influenced by extreme winners and that the two figures can have different eligible call counts.
+- No changes to Smart Score, ranking modes, ROI calculation, win/loss classification, simulated PnL, call records, database functions, migrations, or worker behavior.
+
+### Validation
+
+- Source-level review confirms `ChannelSummary.medianRoiPct` is already typed as `number | null`.
+- UI edits committed to branch `ui/median-roi-performance-representation`.
+- Automated lint, typecheck, and build have not been run in this GitHub-only editing session. They remain required before merge.
+- Production deployment: NO.
+- Production database writes or schema changes: NO.
+
+### Next Step
+
+Run the repository's lint, typecheck, and build checks on the branch, inspect desktop/mobile table overflow, then open a pull request for review. Do not merge or deploy without explicit approval.
