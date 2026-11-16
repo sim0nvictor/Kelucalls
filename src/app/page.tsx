@@ -193,6 +193,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
+            { className: "hidden sm:table-column" },
           ]}
         >
           <DataTableHeader>
