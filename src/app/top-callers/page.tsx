@@ -198,7 +198,7 @@ export default async function TopCallersPage() {
                         <FollowChannelButton channelId={channel.id} initialFollowing={followedChannelIds.has(channel.id)} isSignedIn={Boolean(user)} display="star" />
                       </div>
                     </td>
-                    <td className="sticky left-[42px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-16 sm:px-3">
+                    <td className="sticky left-[84px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-24 sm:px-3">
                       <Link href={`/channels/${channel.slug}`} className="group">
                         <div className="flex min-h-11 min-w-0 items-center gap-2 sm:gap-3">
                           <ChannelAvatar
