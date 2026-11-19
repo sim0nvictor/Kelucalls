@@ -180,7 +180,7 @@ export const getWatchlist = cache(async (): Promise<WatchlistEntry[]> => {
       channel,
       alertRuleId: alert?.id ?? null,
       alertMilestones,
-      alertActive: alert?.is_active ?? true
+      alertActive: alert?.is_active ?? false
     };
   });
 });
