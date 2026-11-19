@@ -82,6 +82,38 @@ export async function setChannelFollowAction(
       console.error("[account] follow channel failed:", error);
       return { ok: false, code: "failed", error: "Could not follow that channel." };
     }
+
+    // Following a channel enables its performance alerts by default. Preserve
+    // an existing rule so a user's customized thresholds or paused state stay intact.
+    const { data: existingRule, error: ruleLookupError } = await supabase
+      .from("user_alert_rules")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("channel_id", channelId)
+      .eq("rule_type", "channel_big_win")
+      .limit(1)
+      .maybeSingle();
+
+    if (ruleLookupError) {
+      console.error("[account] default channel alert lookup failed:", ruleLookupError);
+      return { ok: false, code: "failed", error: "Channel saved, but its alerts could not be enabled. Please try again." };
+    }
+
+    if (!existingRule) {
+      const { error: alertError } = await supabase.from("user_alert_rules").insert({
+        user_id: user.id,
+        channel_id: channelId,
+        rule_type: "channel_big_win",
+        delivery_channels: ["in_app"],
+        conditions: { milestones: [2, 10, 100], source: "channel_watchlist" },
+        is_active: true
+      });
+
+      if (alertError) {
+        console.error("[account] default channel alert creation failed:", alertError);
+        return { ok: false, code: "failed", error: "Channel saved, but its alerts could not be enabled. Please try again." };
+      }
+    }
   } else {
     const { error } = await supabase
       .from("user_channel_watchlist")
@@ -93,10 +125,69 @@ export async function setChannelFollowAction(
       console.error("[account] unfollow channel failed:", error);
       return { ok: false, code: "failed", error: "Could not unfollow that channel." };
     }
+
+    // Channel-scoped milestone alerts are owned by the watchlist relationship.
+    const { error: alertDeleteError } = await supabase
+      .from("user_alert_rules")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("channel_id", channelId)
+      .eq("rule_type", "channel_big_win");
+
+    if (alertDeleteError) {
+      // The worker also requires an active watchlist row, so no further alerts
+      // can be delivered even if cleanup needs to be retried.
+      console.error("[account] channel alert cleanup failed:", alertDeleteError);
+    }
   }
 
   revalidatePath(`${ACCOUNT_BASE_PATH}/watchlist`);
+  revalidatePath(`${ACCOUNT_BASE_PATH}/alerts`);
   revalidatePath(ACCOUNT_BASE_PATH);
+  return OK;
+}
+
+export async function setChannelMilestonesAction(
+  ruleId: string,
+  milestones: number[]
+): Promise<AccountActionResult> {
+  const allowed = [2, 10, 100];
+  const normalized = Array.from(new Set(milestones)).filter((value) => allowed.includes(value)).sort((a, b) => a - b);
+  if (normalized.length === 0 || normalized.length !== milestones.length) {
+    return { ok: false, code: "failed", error: "Choose at least one supported milestone." };
+  }
+
+  const { supabase, user, failure } = await getClientAndUser();
+  if (failure || !supabase || !user) return failure ?? { ok: false, code: "failed" };
+
+  const { data: rule, error: readError } = await supabase
+    .from("user_alert_rules")
+    .select("conditions")
+    .eq("id", ruleId)
+    .eq("user_id", user.id)
+    .eq("rule_type", "channel_big_win")
+    .maybeSingle();
+
+  if (readError || !rule) {
+    console.error("[account] read channel milestone rule failed:", readError);
+    return { ok: false, code: "failed", error: "Could not load that channel's alert settings." };
+  }
+
+  const currentConditions = (rule.conditions ?? {}) as Record<string, unknown>;
+  const { error } = await supabase
+    .from("user_alert_rules")
+    .update({ conditions: { ...currentConditions, milestones: normalized } })
+    .eq("id", ruleId)
+    .eq("user_id", user.id)
+    .eq("rule_type", "channel_big_win");
+
+  if (error) {
+    console.error("[account] update channel milestones failed:", error);
+    return { ok: false, code: "failed", error: "Could not save milestone settings." };
+  }
+
+  revalidatePath(`${ACCOUNT_BASE_PATH}/watchlist`);
+  revalidatePath(`${ACCOUNT_BASE_PATH}/alerts`);
   return OK;
 }
 
