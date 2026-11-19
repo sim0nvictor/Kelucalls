@@ -10,6 +10,7 @@
 
 import axios from "axios";
 import { createClient } from "@supabase/supabase-js";
+import { loadEnabledUserIds } from "./alert-prefs.js";
 import dotenv from "dotenv";
 import {
   LOG_LEVELS,
@@ -142,6 +143,136 @@ async function getOpenCalls(supabase) {
 // This guarantees each milestone fires exactly once per call, even if the
 // worker restarts or the row is updated many times.
 // ---------------------------------------------------------------------------
+async function insertChannelMilestoneNotifications(supabase, { callId, channelId, tokenId, newEvents }) {
+  if (!channelId || !newEvents.length) return;
+
+  const { data: rules, error: rulesError } = await supabase
+    .from("user_alert_rules")
+    .select("id, user_id, conditions, delivery_channels")
+    .eq("rule_type", "channel_big_win")
+    .eq("channel_id", channelId)
+    .eq("is_active", true);
+
+  if (rulesError) {
+    log(LOG_LEVELS.WARN, WORKER_NAME, "Failed to load channel milestone alert rules", {
+      channelId,
+      error: rulesError.message
+    });
+    return;
+  }
+  if (!rules || rules.length === 0) return;
+
+  const userIds = Array.from(new Set(rules.map((rule) => rule.user_id)));
+  const { data: watchlistRows, error: watchlistError } = await supabase
+    .from("user_channel_watchlist")
+    .select("user_id, is_muted")
+    .eq("channel_id", channelId)
+    .in("user_id", userIds);
+
+  if (watchlistError) {
+    log(LOG_LEVELS.WARN, WORKER_NAME, "Failed to verify channel watchlist before alert delivery", {
+      channelId,
+      error: watchlistError.message
+    });
+    return;
+  }
+
+  const watchedAndUnmuted = new Set(
+    (watchlistRows || []).filter((row) => !row.is_muted).map((row) => row.user_id)
+  );
+  const candidates = rules.filter((rule) => watchedAndUnmuted.has(rule.user_id));
+  if (candidates.length === 0) return;
+
+  const enabledUserIds = await loadEnabledUserIds(
+    supabase,
+    candidates.map((rule) => rule.user_id),
+    WORKER_NAME
+  );
+
+  const [{ data: channel }, { data: token }] = await Promise.all([
+    supabase.from("channels").select("slug, title").eq("id", channelId).maybeSingle(),
+    tokenId
+      ? supabase.from("tokens").select("symbol").eq("id", tokenId).maybeSingle()
+      : Promise.resolve({ data: null })
+  ]);
+
+  const notifications = [];
+  const triggeredRuleIds = [];
+
+  for (const rule of candidates) {
+    if (!enabledUserIds.has(rule.user_id)) continue;
+
+    const deliveryChannels = rule.delivery_channels || [];
+    if (deliveryChannels.length > 0 && !deliveryChannels.includes("in_app")) continue;
+
+    const conditions = rule.conditions || {};
+    const configuredMilestones = Array.isArray(conditions.milestones)
+      ? conditions.milestones.map(Number)
+      : null;
+    const minMultiple = Number(conditions.min_multiple);
+    const selectedMilestones = configuredMilestones || (
+      Number.isFinite(minMultiple) && minMultiple > 0
+        ? [2, 10, 100].filter((multiple) => multiple >= minMultiple)
+        : [2, 10, 100]
+    );
+
+    for (const event of newEvents) {
+      if (!selectedMilestones.includes(event.multiple)) continue;
+
+      notifications.push({
+        user_id: rule.user_id,
+        alert_rule_id: rule.id,
+        channel_id: channelId,
+        token_id: tokenId || null,
+        dedupe_key: callId + ":" + event.key,
+        title: (channel?.title || "A watched caller") + " reached " + event.key,
+        body: (token?.symbol || "A token") + " from this caller's signal reached a " + event.key + " peak.",
+        url: channel?.slug ? "/channel/" + channel.slug : "/account/watchlist",
+        status: "sent",
+        payload: {
+          eventType: "channel_milestone",
+          callId,
+          milestone: event.key,
+          multiple: event.multiple
+        }
+      });
+      triggeredRuleIds.push(rule.id);
+    }
+  }
+
+  if (notifications.length === 0) return;
+
+  const { error: insertError } = await supabase
+    .from("user_notifications")
+    .upsert(notifications, {
+      onConflict: "user_id,dedupe_key",
+      ignoreDuplicates: true
+    });
+
+  if (insertError) {
+    log(LOG_LEVELS.ERROR, WORKER_NAME, "Failed to insert channel milestone notifications", {
+      channelId,
+      callId,
+      count: notifications.length,
+      error: insertError.message
+    });
+    return;
+  }
+
+  const uniqueRuleIds = Array.from(new Set(triggeredRuleIds));
+  await supabase
+    .from("user_alert_rules")
+    .update({ last_triggered_at: new Date().toISOString() })
+    .in("id", uniqueRuleIds);
+
+  log(LOG_LEVELS.INFO, WORKER_NAME, "Dispatched watched-channel milestone notifications", {
+    channelId,
+    callId,
+    milestones: newEvents.map((event) => event.key),
+    recipients: new Set(notifications.map((item) => item.user_id)).size
+  });
+}
+
 async function insertMilestoneEvents(supabase, { callId, channelId, tokenId, priorPeakMultiple, newPeakMultiple }) {
   const newEvents = ACHIEVEMENT_MILESTONES.filter(({ multiple }) => {
     const wasAlreadyHit = priorPeakMultiple != null && priorPeakMultiple >= multiple;
@@ -173,6 +304,15 @@ async function insertMilestoneEvents(supabase, { callId, channelId, tokenId, pri
       milestones: newEvents.map(e => e.key)
     });
   }
+
+  // Website subscribers are independent from Telegram bot subscribers.
+  // Dispatch through user_notifications and respect watchlist mute + master prefs.
+  await insertChannelMilestoneNotifications(supabase, {
+    callId,
+    channelId,
+    tokenId,
+    newEvents
+  });
 }
 
 async function persistHistoricalObservations(supabase, observations) {
