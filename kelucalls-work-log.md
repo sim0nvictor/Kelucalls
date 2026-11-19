@@ -1075,3 +1075,9 @@ Implementation is on branch `feat/channel-watchlist-stars-alerts`. Lint, typeche
 
 ### Files changed
 `src/components/account/follow-channel-button.tsx`, `src/lib/account/actions.ts`, `src/lib/account/queries.ts`, `src/lib/account/alert-options.ts`, `src/components/account/channel-milestone-settings.tsx`, `src/app/page.tsx`, `src/app/channels/page.tsx`, `src/app/top-callers/page.tsx`, `src/app/channels/[slug]/page.tsx`, `src/app/account/watchlist/page.tsx`, `src/app/account/alerts/page.tsx`, `workers/price-update.js`, and `supabase/migrations/023_channel_watchlist_milestone_alerts.sql`.
+
+### Follow-up verification - 2026-11-19
+- Opened draft PR #21: https://github.com/sim0nvictor/Kelucalls/pull/21.
+- Confirmed the branch is mergeable against `main` and has no merge conflict.
+- Ran repository-source consistency checks for all four star integrations, sticky column offsets, default alert creation, threshold editing, worker dispatch, deduplication, and existing-watchlist backfill; all checks passed.
+- No GitHub Actions workflow runs are configured for the branch, and the remote environment did not provide a local checkout. Therefore `npm run lint`, `npm run typecheck`, worker runtime tests, and migration execution remain unverified. These must be completed before merge/deploy.
