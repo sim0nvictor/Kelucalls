@@ -67,12 +67,13 @@ export const ALERT_OPTIONS: readonly AlertOption[] = [
   },
   {
     ruleType: "channel_big_win",
-    label: "Big win from this caller",
-    description: "A call from someone you follow crosses 2x, 10x or 100x.",
+    label: "Channel performance milestones",
+    description: "Get notified when a call from this channel reaches your selected 2x, 10x or 100x milestones.",
     scope: "channel",
     volume: "low",
-    available: false,
-    defaultConditions: { min_multiple: 2 }
+    // Dispatcher: workers/price-update.js, when a call first crosses a peak multiple.
+    available: true,
+    defaultConditions: { milestones: [2, 10, 100], source: "channel_watchlist" }
   },
   {
     ruleType: "token_price_move",
