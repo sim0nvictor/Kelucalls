@@ -44,7 +44,7 @@ export default async function WatchlistPage() {
                 <div className="min-w-0 flex-1 space-y-3">
                   <div>
                     <Link
-                      href={`/channel/${channel.slug}`}
+                      href={`/channels/${channel.slug}`}
                       className="font-medium text-white transition hover:text-cyan-300"
                     >
                       {channel.title}
