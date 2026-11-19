@@ -39,7 +39,7 @@ export default async function WatchlistPage() {
             return (
               <li
                 key={entry.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-slate-950/60 p-4"
+                className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-start sm:justify-between"
               >
                 <div className="min-w-0 flex-1 space-y-3">
                   <div>
