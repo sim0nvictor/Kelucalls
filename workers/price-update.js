@@ -227,7 +227,7 @@ async function insertChannelMilestoneNotifications(supabase, { callId, channelId
         dedupe_key: callId + ":" + event.key,
         title: (channel?.title || "A watched caller") + " reached " + event.key,
         body: (token?.symbol || "A token") + " from this caller's signal reached a " + event.key + " peak.",
-        url: channel?.slug ? "/channel/" + channel.slug : "/account/watchlist",
+        url: channel?.slug ? "/channels/" + channel.slug : "/account/watchlist",
         status: "sent",
         payload: {
           eventType: "channel_milestone",
