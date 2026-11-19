@@ -36,7 +36,7 @@ export default async function AlertsPage() {
         <h2 className="text-lg font-semibold text-white">Alerts</h2>
         <p className="mt-1 text-sm text-slate-400">
           Channel performance alerts turn on automatically when you add a caller to your watchlist.
-          Choose additional alerts here, and manage each caller's milestones from your watchlist.
+          Choose additional alerts here, and manage each caller&apos;s milestones from your watchlist.
         </p>
       </div>
 
