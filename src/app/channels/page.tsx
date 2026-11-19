@@ -14,6 +14,9 @@ import {
   VerificationBadge,
 } from "@/components/ui/data-table";
 import { getLeaderboard } from "@/lib/dashboard-data";
+import { FollowChannelButton } from "@/components/account/follow-channel-button";
+import { getFollowedChannelIds } from "@/lib/account/queries";
+import { getCurrentUser } from "@/lib/auth/session";
 import { formatCompactPercent, formatMultiple, formatNumber } from "@/lib/metrics";
 import type { RankingMode } from "@/types/kelucalls";
 
@@ -28,7 +31,11 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
   const rankingMode = rankingModes.includes(ranking as RankingMode)
     ? (ranking as RankingMode)
     : "smart";
-  const channels = await getLeaderboard(rankingMode);
+  const [channels, user, followedChannelIds] = await Promise.all([
+    getLeaderboard(rankingMode),
+    getCurrentUser(),
+    getFollowedChannelIds()
+  ]);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
@@ -62,7 +69,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
           minWidth="min-w-[460px] sm:min-w-[68rem]"
           tableClassName="table-fixed"
           columns={[
-            { className: "w-[42px] sm:w-16" },
+            { className: "w-[84px] sm:w-24" },
             { className: "w-[160px] sm:w-56" },
             { className: "hidden sm:table-column" },
             { className: "w-[64px] sm:w-auto" },
@@ -83,7 +90,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
             <th scope="col" className="sticky left-0 z-50 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-left sm:text-xs">
               Rank
             </th>
-            <th scope="col" className="sticky left-[42px] z-40 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:left-16 sm:px-3 sm:text-xs">
+            <th scope="col" className="sticky left-[84px] z-40 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:left-24 sm:px-3 sm:text-xs">
               Channel
             </th>
             <th scope="col" className="sticky z-30 hidden whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
@@ -126,10 +133,13 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
           <tbody>
             {channels.map((channel, index) => (
               <DataTableRow key={channel.id} interactive className="group">
-                <td className="sticky left-0 z-10 bg-[#06101f] px-1.5 py-2 text-center group-hover:bg-[#0b1c2a] sm:px-3 sm:text-left">
-                  <span className={`font-semibold tabular-nums ${index < 3 ? ["text-amber-300", "text-slate-200", "text-orange-300"][index] : "text-slate-400"}`}>
-                    #{index + 1}
-                  </span>
+                <td className="sticky left-0 z-20 bg-[#06101f] px-1 py-1 text-center group-hover:bg-[#0b1c2a] sm:px-2 sm:text-left">
+                  <div className="inline-flex items-center justify-center gap-1">
+                    <span className={`text-[10px] font-semibold tabular-nums sm:text-xs ${index < 3 ? ["text-amber-300", "text-slate-200", "text-orange-300"][index] : "text-slate-400"}`}>
+                      #{index + 1}
+                    </span>
+                    <FollowChannelButton channelId={channel.id} initialFollowing={followedChannelIds.has(channel.id)} isSignedIn={Boolean(user)} display="star" />
+                  </div>
                 </td>
                 <td className="sticky left-[42px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-16 sm:px-3">
                   <ChannelIdentity
