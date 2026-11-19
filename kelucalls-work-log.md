@@ -1042,3 +1042,36 @@ Make typical channel performance visible alongside the preserved raw arithmetic 
 ### Next Step
 
 Run the repository's lint, typecheck, and build checks on the branch, inspect desktop/mobile table overflow, then open a pull request for review. Do not merge or deploy without explicit approval.
+
+## 2026-11-19 - Channel Watchlist Stars and Default Milestone Alerts
+
+### Goal
+Make channel watchlists discoverable directly from the homepage leaderboard, the full channels leaderboard, Top Callers, and channel detail pages. A star should reflect the signed-in user's saved state and toggle without leaving the table.
+
+### Problems identified
+1. The watchlist tables and server actions already existed, but leaderboard rows did not expose them. Users had no obvious way to save a channel while comparing rankings.
+2. Following a channel did not create a channel performance alert. The `channel_big_win` rule type existed, but it was marked unavailable and had no website notification dispatcher.
+3. The existing price worker already detected first-time 2x, 10x, and 100x call milestones, but those events only fed the Telegram bot queue.
+4. Existing watchlists needed a safe backfill so current users would receive the new defaults without having to unfollow and follow again.
+
+### Changes made
+- Added a compact, accessible star display mode to the existing `FollowChannelButton`; it reuses `setChannelFollowAction`, optimistic state, login redirect, and server refresh.
+- Added the star beside the rank on the homepage leaderboard, `/channels`, and `/top-callers`. Added the same control to channel detail pages.
+- The pages now load the signed-in user's followed channel IDs and pass the state to the reusable control.
+- Following a channel creates a default `channel_big_win` alert rule for in-app delivery with milestones `[2, 10, 100]`. Existing rules are preserved so customized or paused settings are not overwritten.
+- Unfollowing removes the channel-scoped milestone rule. The worker also checks that the user still follows the channel and has not muted it.
+- Added `ChannelMilestoneSettings` to the watchlist page so users can choose 2x, 10x, and/or 100x thresholds later.
+- Enabled `channel_big_win` in the alert catalogue and updated the alerts-page explanation.
+- Extended `workers/price-update.js` to fan first-crossing milestone events out to `user_notifications`, respecting each user's global notification preference, channel mute state, active alert rule, and selected thresholds.
+- Added notification deduplication using `user_notifications.dedupe_key` and a unique per-user constraint.
+- Added migration `023_channel_watchlist_milestone_alerts.sql` to add the dedupe key and backfill default milestone rules for existing watchlist entries.
+- Corrected channel detail links in the watchlist and Top Callers to use the existing `/channels/[slug]` route.
+
+### Why it matters
+Users can now save channels while browsing rankings instead of navigating away. Watchlisting also becomes actionable: a user automatically receives in-app alerts when a tracked call first reaches selected performance milestones. The existing Telegram bot subscription system remains separate and unchanged.
+
+### Verification status
+Implementation is on branch `feat/channel-watchlist-stars-alerts`. Lint, typecheck, worker tests, migration execution, and production behavior still need to be verified before merge/deployment. Do not treat the feature as live until migration 023 is applied and the updated worker is deployed.
+
+### Files changed
+`src/components/account/follow-channel-button.tsx`, `src/lib/account/actions.ts`, `src/lib/account/queries.ts`, `src/lib/account/alert-options.ts`, `src/components/account/channel-milestone-settings.tsx`, `src/app/page.tsx`, `src/app/channels/page.tsx`, `src/app/top-callers/page.tsx`, `src/app/channels/[slug]/page.tsx`, `src/app/account/watchlist/page.tsx`, `src/app/account/alerts/page.tsx`, `workers/price-update.js`, and `supabase/migrations/023_channel_watchlist_milestone_alerts.sql`.
