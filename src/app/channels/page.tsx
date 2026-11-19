@@ -59,7 +59,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
       <section className="grid gap-6 xl:grid-cols-[1fr_22rem]">
         <DataTable
           caption="Tracked channel rankings"
-          minWidth="min-w-[460px] sm:min-w-[68rem]"
+          minWidth="min-w-[540px] sm:min-w-[68rem]"
           tableClassName="table-fixed"
           columns={[
             { className: "w-[42px] sm:w-16" },
@@ -68,6 +68,8 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
             { className: "w-[64px] sm:w-auto" },
             { className: "w-[75px] sm:w-auto" },
             { className: "w-[105px] sm:w-auto" },
+            { className: "w-[94px] sm:w-auto" },
+            { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
             { className: "hidden sm:table-column" },
@@ -96,6 +98,9 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
             </th>
             <th scope="col" className="sticky z-30 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1.5 py-3 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
               Avg ROI
+            </th>
+            <th scope="col" className="sticky z-30 whitespace-nowrap border-b border-white/10 bg-slate-950/95 px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">
+              Median ROI
             </th>
             <th scope="col" className="sticky z-30 hidden border-b border-white/10 bg-slate-950/95 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 sm:table-cell">
               Avg Multiple
@@ -152,6 +157,11 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
                 <td className="px-1.5 py-2 text-right sm:px-3 sm:py-3">
                   <span className={`whitespace-nowrap font-mono text-xs tabular-nums sm:text-sm ${channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}`}>
                     {formatCompactPercent(channel.averageRoiPct)}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm">
+                  <span className={channel.medianRoiPct !== null && channel.medianRoiPct > 0 ? "text-emerald-300" : channel.medianRoiPct !== null && channel.medianRoiPct < 0 ? "text-red-300" : "text-slate-400"}>
+                    {channel.medianRoiPct !== null ? formatCompactPercent(channel.medianRoiPct) : "—"}
                   </span>
                 </td>
                 <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">
