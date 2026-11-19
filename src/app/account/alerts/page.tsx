@@ -35,8 +35,8 @@ export default async function AlertsPage() {
       <div>
         <h2 className="text-lg font-semibold text-white">Alerts</h2>
         <p className="mt-1 text-sm text-slate-400">
-          Choose what you want to be told about. Following a caller is a bookmark, being
-          notified about them is a separate choice you make here.
+          Channel performance alerts turn on automatically when you add a caller to your watchlist.
+          Choose additional alerts here, and manage each caller's milestones from your watchlist.
         </p>
       </div>
 
