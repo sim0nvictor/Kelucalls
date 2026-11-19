@@ -7,6 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, DataTableHeader, DataTableRow } from "@/components/ui/data-table";
 import { JsonLd } from "@/components/json-ld";
 import { getChannelDetail } from "@/lib/dashboard-data";
+import { FollowChannelButton } from "@/components/account/follow-channel-button";
+import { getFollowedChannelIds } from "@/lib/account/queries";
+import { getCurrentUser } from "@/lib/auth/session";
 import { formatPercent } from "@/lib/metrics";
 import {
   breadcrumbSchema,
@@ -62,7 +65,11 @@ export async function generateMetadata({
 
 export default async function ChannelDetailPage({ params }: ChannelPageProps) {
   const { slug } = await params;
-  const detail = await getChannelDetail(slug);
+  const [detail, user, followedChannelIds] = await Promise.all([
+    getChannelDetail(slug),
+    getCurrentUser(),
+    getFollowedChannelIds()
+  ]);
 
   if (!detail) notFound();
 
@@ -119,9 +126,17 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
           )}
         </div>
 
-        <h1 className="mt-4 text-4xl font-semibold text-white">
-          {channel.title}
-        </h1>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <h1 className="text-4xl font-semibold text-white">
+            {channel.title}
+          </h1>
+          <FollowChannelButton
+            channelId={channel.id}
+            initialFollowing={followedChannelIds.has(channel.id)}
+            isSignedIn={Boolean(user)}
+            display="star"
+          />
+        </div>
 
         <p className="mt-3 max-w-3xl text-base leading-8 text-slate-300">
           {channel.description?.trim()
