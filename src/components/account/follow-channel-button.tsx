@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Star } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { setChannelFollowAction } from "@/lib/account/actions";
@@ -24,12 +25,14 @@ export function FollowChannelButton({
   channelId,
   initialFollowing,
   isSignedIn,
-  size = "default"
+  size = "default",
+  display = "button"
 }: {
   channelId: string;
   initialFollowing: boolean;
   isSignedIn: boolean;
   size?: "default" | "sm";
+  display?: "button" | "star";
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -39,6 +42,9 @@ export function FollowChannelButton({
 
   const sizeClasses =
     size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm";
+  const accessibleLabel = following
+    ? "Remove channel from watchlist"
+    : "Add channel to watchlist";
 
   function handleClick() {
     if (!isSignedIn) {
@@ -64,6 +70,27 @@ export function FollowChannelButton({
       }
       router.refresh();
     });
+  }
+
+  if (display === "star") {
+    return (
+      <span className="inline-flex flex-col items-center gap-1">
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={isPending}
+          aria-label={accessibleLabel}
+          aria-pressed={following}
+          title={following ? "In your watchlist" : "Add to watchlist"}
+          className={`inline-flex size-8 items-center justify-center rounded-lg transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 disabled:cursor-wait disabled:opacity-50 ${
+            following ? "text-amber-300" : "text-slate-500 hover:text-amber-200"
+          }`}
+        >
+          <Star className={`size-4 ${following ? "fill-current" : ""}`} aria-hidden="true" />
+        </button>
+        {error ? <span role="status" className="max-w-28 text-center text-[10px] leading-tight text-red-300">{error}</span> : null}
+      </span>
+    );
   }
 
   return (

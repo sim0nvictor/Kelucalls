@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { FollowChannelButton } from "@/components/account/follow-channel-button";
 import { MuteChannelToggle } from "@/components/account/mute-channel-toggle";
+import { ChannelMilestoneSettings } from "@/components/account/channel-milestone-settings";
 import { getWatchlist } from "@/lib/account/queries";
 
 export default async function WatchlistPage() {
@@ -12,8 +13,8 @@ export default async function WatchlistPage() {
       <div>
         <h2 className="text-lg font-semibold text-white">Your watchlist</h2>
         <p className="mt-1 text-sm text-slate-400">
-          Channels you follow. Use the bell on each one to decide whether it can notify
-          you - following and being notified are separate on purpose.
+          Channels you follow. Performance alerts are enabled by default; choose which
+          milestones matter to you, or mute a channel at any time.
         </p>
       </div>
 
@@ -38,18 +39,25 @@ export default async function WatchlistPage() {
             return (
               <li
                 key={entry.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-slate-950/60 p-4"
+                className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-start sm:justify-between"
               >
-                <div className="min-w-0">
-                  <Link
-                    href={`/channel/${channel.slug}`}
-                    className="font-medium text-white transition hover:text-cyan-300"
-                  >
-                    {channel.title}
-                  </Link>
-                  <p className="mt-0.5 truncate text-sm text-slate-500">
-                    @{channel.telegramHandle}
-                  </p>
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div>
+                    <Link
+                      href={`/channels/${channel.slug}`}
+                      className="font-medium text-white transition hover:text-cyan-300"
+                    >
+                      {channel.title}
+                    </Link>
+                    <p className="mt-0.5 truncate text-sm text-slate-500">
+                      @{channel.telegramHandle}
+                    </p>
+                  </div>
+                  <ChannelMilestoneSettings
+                    ruleId={entry.alertRuleId}
+                    initialMilestones={entry.alertMilestones}
+                    initialActive={entry.alertActive}
+                  />
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">

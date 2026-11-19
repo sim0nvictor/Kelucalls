@@ -18,6 +18,9 @@ import { getDashboardSnapshot, getSponsoredTokenPlacements } from "@/lib/dashboa
 import { formatCompactCurrency, formatCompactPercent, formatMultiple, formatNumber, formatPercent } from "@/lib/metrics";
 import type { RankingMode } from "@/types/kelucalls";
 import { SponsoredPlacementCard } from "@/components/sponsored-placement-card";
+import { FollowChannelButton } from "@/components/account/follow-channel-button";
+import { getFollowedChannelIds } from "@/lib/account/queries";
+import { getCurrentUser } from "@/lib/auth/session";
 import { siteConfig } from "@/config/site";
 
 export const revalidate = 0;
@@ -53,9 +56,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     ? (ranking as RankingMode)
     : "smart";
 
-  const [snapshot, sponsoredTokens] = await Promise.all([
+  const [snapshot, sponsoredTokens, user, followedChannelIds] = await Promise.all([
     getDashboardSnapshot(rankingMode),
     getSponsoredTokenPlacements("homepage", 1),
+    getCurrentUser(),
+    getFollowedChannelIds(),
   ]);
 
   return (
@@ -185,7 +190,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           minWidth="min-w-[580px] sm:min-w-[56rem]"
           tableClassName="table-fixed"
           columns={[
-            { className: "w-[42px] sm:w-16" },
+            { className: "w-[84px] sm:w-24" },
             { className: "w-[180px] sm:w-56" },
             { className: "w-[70px] sm:w-auto" },
             { className: "w-[90px] sm:w-auto" },
@@ -198,7 +203,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         >
           <DataTableHeader>
             <th scope="col" className="sticky left-0 z-50 bg-slate-950 px-1 py-3 text-center text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-left sm:text-xs">Rank</th>
-            <th scope="col" className="sticky left-[42px] z-40 bg-slate-950 px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:left-16 sm:px-3 sm:text-xs">Channel</th>
+            <th scope="col" className="sticky left-[84px] z-40 bg-slate-950 px-1.5 py-3 text-left text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:left-24 sm:px-3 sm:text-xs">Channel</th>
             <th scope="col" className="px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Calls</th>
             <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Win %</th>
             <th scope="col" className="whitespace-nowrap px-1 py-3 text-right text-[9px] font-semibold uppercase tracking-wide text-slate-500 sm:px-3 sm:text-xs">Avg ROI</th>
@@ -209,8 +214,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </DataTableHeader>
           <tbody>{snapshot.leaderboard.slice(0, 6).map((channel, index) => (
             <DataTableRow key={channel.id} interactive className="group">
-              <td className="sticky left-0 z-10 bg-[#06101f] px-1 py-2 text-center group-hover:bg-[#0b1c2a] sm:px-3 sm:text-left"><span className={index < 3 ? `font-semibold tabular-nums ${["text-amber-300", "text-slate-200", "text-orange-300"][index]}` : "font-semibold tabular-nums text-slate-400"}>#{index + 1}</span></td>
-              <td className="sticky left-[42px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-16 sm:px-3 sm:py-3"><ChannelIdentity href={`/channels/${channel.slug}`} title={channel.title} avatarUrl={channel.avatarUrl} description={`Telegram · ${formatNumber(channel.totalCalls)} calls`} className="min-h-11 gap-2" /></td>
+              <td className="sticky left-0 z-20 bg-[#06101f] px-1 py-1 text-center group-hover:bg-[#0b1c2a] sm:px-2 sm:text-left"><div className="inline-flex items-center justify-center gap-1"><span className={index < 3 ? `text-[10px] font-semibold tabular-nums sm:text-xs ${["text-amber-300", "text-slate-200", "text-orange-300"][index]}` : "text-[10px] font-semibold tabular-nums text-slate-400 sm:text-xs"}>#{index + 1}</span><FollowChannelButton channelId={channel.id} initialFollowing={followedChannelIds.has(channel.id)} isSignedIn={Boolean(user)} display="star" /></div></td>
+              <td className="sticky left-[84px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-24 sm:px-3 sm:py-3"><ChannelIdentity href={`/channels/${channel.slug}`} title={channel.title} avatarUrl={channel.avatarUrl} description={`Telegram · ${formatNumber(channel.totalCalls)} calls`} className="min-h-11 gap-2" /></td>
               <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(channel.totalCalls)}</td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><PerformanceValue value={channel.winRatePct} /></td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{formatCompactPercent(channel.averageRoiPct)}</span></td>
