@@ -29,6 +29,9 @@ export type WatchlistEntry = {
   isMuted: boolean;
   notes: string | null;
   channel: WatchedChannel | null;
+  alertRuleId: string | null;
+  alertMilestones: number[];
+  alertActive: boolean;
 };
 
 export type AlertRule = {
@@ -125,14 +128,32 @@ export const getWatchlist = cache(async (): Promise<WatchlistEntry[]> => {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
-    .from("user_channel_watchlist")
-    .select(`id, created_at, is_muted, notes, channel:channels ( ${CHANNEL_FIELDS} )`)
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: alertRows, error: alertError }] = await Promise.all([
+    supabase
+      .from("user_channel_watchlist")
+      .select(`id, created_at, is_muted, notes, channel:channels ( ${CHANNEL_FIELDS} )`)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("user_alert_rules")
+      .select("id, channel_id, conditions, is_active")
+      .eq("rule_type", "channel_big_win")
+      .order("created_at", { ascending: false })
+  ]);
 
   if (error) {
     console.error("[account] failed to load watchlist:", error);
     return [];
+  }
+
+  if (alertError) {
+    console.error("[account] failed to load channel alert settings:", alertError);
+  }
+
+  const alertByChannel = new Map<string, { id: string; conditions: Record<string, unknown> | null; is_active: boolean }>();
+  for (const rule of (alertRows ?? []) as Array<{ id: string; channel_id: string; conditions: Record<string, unknown> | null; is_active: boolean }>) {
+    if (!alertByChannel.has(rule.channel_id)) {
+      alertByChannel.set(rule.channel_id, rule);
+    }
   }
 
   type Row = {
@@ -143,13 +164,25 @@ export const getWatchlist = cache(async (): Promise<WatchlistEntry[]> => {
     channel: RawChannel | RawChannel[] | null;
   };
 
-  return ((data ?? []) as unknown as Row[]).map((row) => ({
-    id: row.id,
-    createdAt: row.created_at,
-    isMuted: row.is_muted,
-    notes: row.notes,
-    channel: toWatchedChannel(firstRelation(row.channel))
-  }));
+  return ((data ?? []) as unknown as Row[]).map((row) => {
+    const channel = toWatchedChannel(firstRelation(row.channel));
+    const alert = channel ? alertByChannel.get(channel.id) ?? null : null;
+    const configured = alert?.conditions?.milestones;
+    const alertMilestones = Array.isArray(configured)
+      ? configured.map(Number).filter((value) => [2, 10, 100].includes(value))
+      : [2, 10, 100];
+
+    return {
+      id: row.id,
+      createdAt: row.created_at,
+      isMuted: row.is_muted,
+      notes: row.notes,
+      channel,
+      alertRuleId: alert?.id ?? null,
+      alertMilestones,
+      alertActive: alert?.is_active ?? false
+    };
+  });
 });
 
 /** Channel ids the current user follows. Cheap lookup for follow buttons. */

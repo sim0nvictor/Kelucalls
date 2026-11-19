@@ -187,9 +187,17 @@ Signed-out users get sent to `/login?next=<current page>` rather than a dead end
 
 - The admin login still has its own separate problems (single error message,
   no token refresh, in-memory rate limiter). Tracked separately.
-- Alert rules can be viewed and toggled but the fan-out worker that writes
-  `user_notifications` is not built yet.
+- Channel milestone alerts are dispatched by `workers/price-update.js` when calls
+  first cross configured 2x, 10x, or 100x peak multiples. The dispatcher checks
+  the user's watchlist, per-channel mute state, active alert rule, and global
+  notification preference before writing to `user_notifications`.
 - Token watchlist has schema and queries but no UI.
 - OAuth providers are not wired up. Adding one is a Supabase dashboard change
   plus a button that calls `signInWithOAuth`; the callback route already
   handles the PKCE exchange.
+
+### Channel leaderboard watchlist stars
+
+The homepage leaderboard, `/channels`, `/top-callers`, and channel detail pages render the shared `FollowChannelButton` in star mode. Server pages seed it with `getFollowedChannelIds()` and `getCurrentUser()`; the component uses the same authenticated server action as the account watchlist.
+
+Following a channel creates an active `channel_big_win` rule with in-app milestones `[2, 10, 100]`. Existing rules are preserved. The watchlist page lets users customize those thresholds, mute a channel, or remove it. Migration 023 backfills defaults for existing watchlist rows and adds per-user notification deduplication.
