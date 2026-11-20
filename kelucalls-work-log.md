@@ -1128,3 +1128,87 @@ The UI now reads the actual stored aggregate instead of silently defaulting a mi
 ### Next Step
 
 Run `npm run lint`, `npm run typecheck`, and `npm run build` against this branch, then review the pull request before merge/deployment. After deployment, verify that the dashboard values match `trending_tokens.avg_roi_pct` for the affected token IDs and that the research provider completes its trending-token query.
+
+
+## 2026-11-20 - Stage B: Price Pipeline and Unknown ROI Semantics
+
+### Objective
+
+Repair the market-price path so calls use the correct DexScreener market pair, current prices can continue updating independently of historical entry availability, and unmeasurable calls are no longer presented as genuine 0% returns.
+
+### Production Diagnosis (Read-Only, 2026-11-20)
+
+A read-only Supabase snapshot of open calls returned:
+
+- 17,854 open calls.
+- 7,171 calls with a missing/invalid entry price.
+- 7,184 calls with a missing/invalid current price.
+- 7,159 calls missing both entry and current prices.
+- 10,670 calls with both prices available.
+- 12 calls with no contract address.
+- 122,311 historical token price observations across 3,796 tokens, from 2026-10-05 through 2026-11-20.
+
+Missing current prices by chain:
+
+- Solana: 3,528 / 9,611.
+- Other: 2,183 / 2,391.
+- BSC: 731 / 944.
+- Ethereum: 538 / 4,589.
+- Base: 155 / 248.
+- Sui: 37 / 37.
+- Tron: 6 / 17.
+- Avalanche: 3 / 9.
+- Arbitrum: 2 / 7.
+- Polygon: 1 / 1.
+
+The recent price worker was active, processing 500 calls per cycle. Examples from 10:01–10:51 UTC updated 104–179 calls per 500, leaving 321–396 unpriced. One later cycle recorded 163 updated and 337 unpriced. Worker status was marked succeeded even for heavily partial runs because any processed/unpriced rows satisfied the success condition.
+
+### Confirmed Code Defects
+
+1. Both `workers/price-update.js` and `scraper/index.js` selected `data.pairs[0]` from DexScreener. The same contract can return multiple pairs, so the first pair is not a safe market selection rule. The existing `workers/intent-signals.js` already chooses the deepest-liquidity pair.
+2. The price worker did not match a returned pair to the token's expected chain.
+3. The worker replaced a missing historical entry price with the current market quote and wrote that quote into `calls.entry_price_usd`. This fabricated a zero-return baseline and corrupted the meaning of call ROI.
+4. The scraper also selected the first pair for its initial entry quote and had no HTTP response-status check.
+
+### Changes on `fix/price-pipeline-stage-b`
+
+- Added `workers/dexscreener.js` with shared chain normalization, chain-aware pair selection, valid positive-price checks, liquidity/volume ordering, and snapshot parsing.
+- Updated `workers/price-update.js` to select the deepest-liquid valid pair on the expected chain, avoid cross-chain fallback for known chains, classify unpriced outcomes (`no_pairs`, `chain_mismatch`, `invalid_price`, `provider_error`), and include those reason counts in worker-run details.
+- Updated retries so non-transient HTTP errors are not retried repeatedly.
+- Removed the fallback that copied current price into `calls.entry_price_usd`. Current/peak market prices continue to update, while ROI, multiples, win state, milestones, and simulated current/peak PnL remain null until a valid entry price exists.
+- Updated `scraper/index.js` to use the same chain-aware deepest-liquid pair selection and to reject non-2xx HTTP responses.
+- Added `workers/price-metrics.js` to centralize safe performance calculations.
+- Added tests for pair selection, chain mismatch, invalid prices, and unknown-entry ROI semantics.
+- Added `npm run test:price`.
+- Updated the Live Calls, homepage, ticker, token detail, trending token and token market displays to show an em dash for unavailable ROI/multiples instead of a false 0%.
+- Updated Supabase TypeScript types to represent nullable measurements.
+- Added migration `024_price_measurement_unknown_state.sql` to allow nullable derived metrics, convert existing unmeasurable defaults to NULL, and refresh channel statistics using only measurable calls for ROI/win-rate/median calculations.
+
+### Why It Matters
+
+A current market quote cannot be used as a historical call entry. Preserving unknown values prevents fake 0% ROI, fake 1x multiples, false losses, and fake zero simulated PnL. Chain-aware pair selection reduces the risk of pricing a token from an unrelated chain/pool. Reason counters make provider coverage measurable rather than hiding failures behind a generic unpriced count.
+
+### Scope and Safety
+
+- No production migration applied.
+- No production call or token rows updated.
+- No worker or scraper process started.
+- No deployment performed.
+- No environment files or secrets accessed.
+- Existing historical peak prices are preserved; derived peak performance remains available only when a valid entry price exists.
+- Existing ROI formula remains `(current - entry) / entry * 100`.
+- Ranking formula weights remain unchanged; channel ROI and win rate now exclude calls whose required price basis is unknown.
+
+### Validation Status
+
+- Source changes committed to the feature branch.
+- Added automated tests; not yet executed in a local checkout.
+- Migration SQL aggregate FILTER expression syntax checked with a read-only production query.
+- Full lint, TypeScript, build, worker tests, and Vercel preview checks remain pending.
+- Migration must be reviewed and applied before deploying the worker/scraper code that writes NULL derived metrics.
+
+### Remaining Investigation
+
+The 7,159 calls without both entry/current prices cannot be reconstructed from the available observation history: only 4 of the 7,171 missing-entry open calls had any token observation before the call timestamp, and none had an observation within ten minutes after the call. A separate historical-price provider/backfill may be needed for these legacy calls. Do not synthesize their entry prices from today's quotes.
+
+Next: run `npm run test:price`, `npm run lint`, `npm run typecheck`, and `npm run build`; inspect the migration; review the pull request; apply migration 024 before deploying the updated worker and scraper. Then compare unpriced-reason counts and price coverage over several worker cycles.
