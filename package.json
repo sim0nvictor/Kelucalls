@@ -36,7 +36,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.mjs",
-    "test:navbar": "playwright test tests/navbar-layout.spec.ts"
+    "test:navbar": "playwright test tests/navbar-layout.spec.ts",
+    "test:price": "node --test workers/dexscreener.test.js workers/price-metrics.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
