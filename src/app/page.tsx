@@ -130,7 +130,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <tbody>{snapshot.trendingTokens.map((token) => (
             <DataTableRow key={token.id} interactive className="group">
               <td className="sticky left-0 z-10 w-[40%] bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:w-auto sm:px-3 sm:py-3"><TokenIdentity href={`/tokens?symbol=${token.symbol}`} symbol={token.symbol} name={token.name} logoUrl={token.logoUrl} chain={token.chain} className="min-h-11 gap-2" /></td>
-              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={token.averageRoiPct > 0 ? "text-emerald-300" : token.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{formatCompactPercent(token.averageRoiPct)}</span></td>
+              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={token.averageRoiPct == null ? "text-slate-500" : token.averageRoiPct > 0 ? "text-emerald-300" : token.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{token.averageRoiPct == null ? "—" : formatCompactPercent(token.averageRoiPct)}</span></td>
               <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(token.totalCalls)}</td>
               <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(token.uniqueChannels)}</td>
               <td className="hidden px-3 py-3 text-left text-slate-300 sm:table-cell">{token.chain}</td>
