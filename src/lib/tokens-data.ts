@@ -16,7 +16,7 @@ export type TokenMarketRow = {
   logoUrl: string | null;
   totalCalls: number;
   uniqueChannels: number;
-  averageRoiPct: number;
+  averageRoiPct: number | null;
   bestMultiple: number;
   lastCalledAt: string | null;
   lastPriceUsd: number | null;
@@ -107,7 +107,7 @@ export async function getTokenMarketRows(limit = 200): Promise<TokenMarketRow[]>
           null,
         totalCalls: numberOrZero(row.total_calls),
         uniqueChannels: numberOrZero(row.unique_channels),
-        averageRoiPct: numberOrZero(row.avg_roi_pct),
+        averageRoiPct: numberOrNull(row.avg_roi_pct),
         bestMultiple: numberOrZero(row.best_multiple, 1),
         lastCalledAt: stringOrNull(row.last_called_at),
         lastPriceUsd: price?.lastPriceUsd ?? null,
