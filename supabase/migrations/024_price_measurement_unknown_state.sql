@@ -19,6 +19,7 @@ alter table public.call_metrics
   alter column hit_10x drop not null,
   alter column hit_50x drop not null,
   alter column hit_100x drop not null,
+  alter column simulated_investment_usd drop not null,
   alter column simulated_current_value_usd drop not null,
   alter column simulated_peak_value_usd drop not null,
   alter column simulated_current_pnl_usd drop not null,
@@ -53,6 +54,7 @@ set
   hit_10x = case when c.entry_price_usd > 0 and cm.peak_price_usd > 0 then cm.hit_10x else null end,
   hit_50x = case when c.entry_price_usd > 0 and cm.peak_price_usd > 0 then cm.hit_50x else null end,
   hit_100x = case when c.entry_price_usd > 0 and cm.peak_price_usd > 0 then cm.hit_100x else null end,
+  simulated_investment_usd = case when c.entry_price_usd > 0 then cm.simulated_investment_usd else null end,
   simulated_current_value_usd = case
     when c.entry_price_usd > 0 and cm.current_price_usd > 0 then cm.simulated_current_value_usd
     else null
