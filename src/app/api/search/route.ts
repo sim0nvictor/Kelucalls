@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
           isVerified: row.is_verified,
           totalCalls: Number(stats.total_calls ?? 0),
           winRatePct: Number(stats.win_rate_pct ?? 0),
-          averageRoiPct: Number(stats.average_roi_pct ?? 0),
+          averageRoiPct: stats.average_roi_pct == null ? null : Number(stats.average_roi_pct),
           rankingScore: Number(stats.ranking_score ?? 0),
         };
       });
