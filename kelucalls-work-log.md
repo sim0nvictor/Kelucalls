@@ -1081,3 +1081,50 @@ Implementation is on branch `feat/channel-watchlist-stars-alerts`. Lint, typeche
 - Confirmed the branch is mergeable against `main` and has no merge conflict.
 - Ran repository-source consistency checks for all four star integrations, sticky column offsets, default alert creation, threshold editing, worker dispatch, deduplication, and existing-watchlist backfill; all checks passed.
 - No GitHub Actions workflow runs are configured for the branch, and the remote environment did not provide a local checkout. Therefore `npm run lint`, `npm run typecheck`, worker runtime tests, and migration execution remain unverified. These must be completed before merge/deploy.
+
+
+## 2026-11-20 - Trending Token ROI Column Mapping Repair (Stage A)
+
+### Objective
+
+Restore token ROI values in the homepage/dashboard, token market list, and Kelucalls internal Daily Research provider without changing ROI formulas, aggregation populations, ranking weights, or stored production metrics.
+
+### Root Cause
+
+The production `public.trending_tokens` materialized view is defined in `supabase/migrations/018_price_measurement_semantics.sql` with the ROI column named `avg_roi_pct`. The application had been reading and selecting `average_roi_pct`, a different name.
+
+Because the dashboard and token-market mappers converted missing values to zero, the field-name mismatch silently rendered valid stored ROI values as `0.0%`. The Daily Research provider selected the nonexistent column, causing its trending-token query to fail.
+
+Production read-only inspection on 2026-11-20 confirmed non-zero values in `avg_roi_pct` for tokens whose dashboard displayed 0.0%, including 5WSJHX (-56.9563%), 8K4SBT (-86.8680%), GROKLET (-88.9552%), and BOTIFY (-54.4141%).
+
+### Changes
+
+- `src/lib/dashboard-data.ts`: read `row.avg_roi_pct` and translate the existing app-facing `average_roi_pct` sort option to the actual database column `avg_roi_pct`.
+- `src/lib/tokens-data.ts`: map `row.avg_roi_pct` into the existing `averageRoiPct` application property.
+- `src/lib/research/sources/kelucalls.ts`: select `avg_roi_pct`, update the row type, and map the correct property so the internal research provider can read trending-token ROI.
+- `src/lib/supabase/types.ts`: align the materialized-view type with `avg_roi_pct` and mark it nullable, matching SQL AVG semantics when no measurable values exist.
+- `src/lib/supabase/queries.ts`: preserve the public `average_roi_pct` sort option while translating it to `avg_roi_pct` for the database query.
+- No SQL migration was required: the production materialized-view column already exists under the `avg_roi_pct` name.
+
+### Why It Matters
+
+The UI now reads the actual stored aggregate instead of silently defaulting a missing property to zero. Token ROI sorting and the internal research provider use the same real database column. Existing app-facing property names remain stable, limiting changes to the database boundary.
+
+### Scope and Safety
+
+- ROI formula: unchanged.
+- Trending-token aggregation formula and eligible call population: unchanged.
+- Ranking weights and default ordering: unchanged.
+- Production database records, materialized views, and schema: NOT modified.
+- Environment files and secrets: NOT accessed.
+- Changes are isolated to branch `fix/trending-token-roi-column`; `main` has not been modified.
+
+### Validation Status
+
+- Source changes applied to the feature branch.
+- Automated lint, typecheck, build, and runtime verification: pending.
+- Production dashboard verification: pending deployment; no deployment was performed.
+
+### Next Step
+
+Run `npm run lint`, `npm run typecheck`, and `npm run build` against this branch, then review the pull request before merge/deployment. After deployment, verify that the dashboard values match `trending_tokens.avg_roi_pct` for the affected token IDs and that the research provider completes its trending-token query.
