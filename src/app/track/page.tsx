@@ -211,8 +211,8 @@ function TrackedResultCard({
           <div className="flex items-center gap-1.5 text-xs text-slate-500 uppercase tracking-widest">
             <TrendingUp className="size-3" /> Avg ROI
           </div>
-          <div className={`text-2xl font-semibold ${result.averageRoiPct > 0 ? "text-emerald-300" : result.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
-            {formatPercent(result.averageRoiPct)}
+          <div className={`text-2xl font-semibold ${result.averageRoiPct == null ? "text-slate-500" : result.averageRoiPct > 0 ? "text-emerald-300" : result.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
+            {result.averageRoiPct == null ? "—" : formatPercent(result.averageRoiPct)}
           </div>
         </div>
         <div className="p-4 space-y-1">
