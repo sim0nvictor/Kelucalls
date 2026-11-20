@@ -45,17 +45,17 @@ type CallRow = {
     peak_price_usd: number | string | null;
     current_roi_pct: number | string | null;
     peak_multiple: number | string | null;
-    hit_2x: boolean;
-    hit_10x: boolean;
-    hit_100x: boolean;
+    hit_2x: boolean | null;
+    hit_10x: boolean | null;
+    hit_100x: boolean | null;
   }> | {
     current_price_usd: number | string | null;
     peak_price_usd: number | string | null;
     current_roi_pct: number | string | null;
     peak_multiple: number | string | null;
-    hit_2x: boolean;
-    hit_10x: boolean;
-    hit_100x: boolean;
+    hit_2x: boolean | null;
+    hit_10x: boolean | null;
+    hit_100x: boolean | null;
   } | null;
 };
  
