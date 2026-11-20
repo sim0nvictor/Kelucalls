@@ -293,7 +293,7 @@ export default async function TokenDetailPage({ params }: PageProps) {
                       })}
                     </div>
                     <div className="text-xs text-slate-600">
-                      Entry ${call.entryPriceUsd > 0
+                      Entry ${call.entryPriceUsd != null && call.entryPriceUsd > 0
                         ? call.entryPriceUsd < 0.0001
                           ? call.entryPriceUsd.toExponential(2)
                           : call.entryPriceUsd.toPrecision(4)
