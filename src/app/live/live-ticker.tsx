@@ -30,7 +30,7 @@ export function LiveFeedTicker({ calls: initialCalls }: LiveFeedTickerProps) {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium text-white">{call.tokenSymbol}</span>
-                {call.currentRoiPct != null && call.currentRoiPct > 0 ? (
+                {call.currentRoiPct == null ? null : call.currentRoiPct > 0 ? (
                   <TrendingUp className="size-3 text-emerald-400" />
                 ) : (
                   <TrendingDown className="size-3 text-red-400" />
