@@ -482,24 +482,37 @@ async function insertCall({
 async function fetchDexScreenerData(contractAddress, expectedChain) {
   if (!contractAddress) return null;
 
-  try {
-    const res = await fetch(
-      `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(contractAddress)}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!res.ok) return null;
+  const endpoint = `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(contractAddress)}`;
 
-    const data = await res.json();
-    const selected = selectDexPair(data?.pairs, expectedChain);
-    if (!selected.pair) return null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const res = await fetch(endpoint, { signal: AbortSignal.timeout(6000) });
 
-    const snapshot = parseDexPairSnapshot(selected.pair);
-    if (!snapshot) return null;
+      if (!res.ok) {
+        const transient = res.status === 408 || res.status === 409 || res.status === 425 || res.status === 429 || res.status >= 500;
+        if (transient && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+          continue;
+        }
+        return null;
+      }
 
-    return { priceUsd: snapshot.priceUsd, logoUrl: snapshot.logoUrl };
-  } catch {
-    return null;
+      const data = await res.json();
+      const selected = selectDexPair(data?.pairs, expectedChain);
+      if (!selected.pair) return null;
+
+      const snapshot = parseDexPairSnapshot(selected.pair);
+      if (!snapshot) return null;
+
+      return { priceUsd: snapshot.priceUsd, logoUrl: snapshot.logoUrl };
+    } catch {
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      }
+    }
   }
+
+  return null;
 }
 
 /**
