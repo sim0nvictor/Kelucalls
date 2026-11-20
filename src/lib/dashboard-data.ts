@@ -95,7 +95,7 @@ function mapChannelSummary(row: ChannelRow): ChannelSummary {
   const stats = (Array.isArray(row.channel_stats)
   ? row.channel_stats[0]
   : row.channel_stats) ?? {};
-  const averageRoiPct = toNumber(stats.average_roi_pct);
+  const averageRoiPct = toNumber(stats.average_roi_pct, null);
   const winRatePct    = toNumber(stats.win_rate_pct);
   const totalCalls    = toNumber(stats.total_calls);
  
@@ -124,7 +124,7 @@ function mapChannelSummary(row: ChannelRow): ChannelSummary {
     totalCalls,
     winRatePct,
     averageRoiPct,
-    averagePeakRoiPct:        toNumber(stats.average_peak_roi_pct),
+    averagePeakRoiPct:        toNumber(stats.average_peak_roi_pct, null),
     averageMultiple:          toNumber(stats.average_multiple, 1),
     bestMultiple:             toNumber(stats.best_multiple, 1),
     hit2xCount:               toNumber(stats.hit_2x_count),
