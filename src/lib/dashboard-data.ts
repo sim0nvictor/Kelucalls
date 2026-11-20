@@ -484,7 +484,7 @@ export async function getTrendingTokens(limit = 6, orderBy: "unique_channels" | 
           : WELL_KNOWN_TOKEN_LOGOS[symbol.toUpperCase()] ?? null,
         totalCalls:      toNumber(row.total_calls),
         uniqueChannels:  toNumber(row.unique_channels),
-        averageRoiPct:   toNumber(row.avg_roi_pct),
+        averageRoiPct:   toNumber(row.avg_roi_pct, null),
         bestMultiple:    toNumber(row.best_multiple, 1),
         lastCalledAt:    row.last_called_at  ? String(row.last_called_at)  : null,
       } satisfies TrendingToken;
