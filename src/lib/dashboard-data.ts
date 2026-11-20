@@ -19,11 +19,11 @@ import type {
 // ---------------------------------------------------------------------------
  
 type ChannelRow = {
-  id: string;
-  slug: string;
-  title: string;
-  telegram_handle: string;
-  telegram_url: string;
+  id:entry_price_usd: number | string | null;
+  slug:entry_price_usd: number | string | null;
+  title:entry_price_usd: number | string | null;
+  telegram_handle:entry_price_usd: number | string | null;
+  telegram_url:entry_price_usd: number | string | null;
   description: string | null;
   avatar_url: string | null;
   status: ChannelSummary["status"];
@@ -33,26 +33,26 @@ type ChannelRow = {
 };
  
 type CallRow = {
-  id: string;
-  called_at: string;
+  id:entry_price_usd: number | string | null;
+  called_at:entry_price_usd: number | string | null;
   entry_price_usd: number | string | null;
   // PostgREST returns these as a plain object (one-to-one FK) or array
   // depending on how the relationship is defined. Handle both defensively.
-  channels: Array<{ slug: string; title: string }> | { slug: string; title: string } | null;
-  tokens: Array<{ symbol: string; contract_address: string | null; logo_url: string | null }> | { symbol: string; contract_address: string | null; logo_url: string | null } | null;
+  channels: Array<{ slug:entry_price_usd: number | string | null; title: string }> | { slug:entry_price_usd: number | string | null; title: string } | null;
+  tokens: Array<{ symbol:entry_price_usd: number | string | null; contract_address: string | null; logo_url: string | null }> | { symbol:entry_price_usd: number | string | null; contract_address: string | null; logo_url: string | null } | null;
   call_metrics: Array<{
     current_price_usd: number | string | null;
     peak_price_usd: number | string | null;
-    current_roi_pct: number | string;
-    peak_multiple: number | string;
+    current_roi_pct: number |entry_price_usd: number | string | null;
+    peak_multiple: number |entry_price_usd: number | string | null;
     hit_2x: boolean;
     hit_10x: boolean;
     hit_100x: boolean;
   }> | {
     current_price_usd: number | string | null;
     peak_price_usd: number | string | null;
-    current_roi_pct: number | string;
-    peak_multiple: number | string;
+    current_roi_pct: number |entry_price_usd: number | string | null;
+    peak_multiple: number |entry_price_usd: number | string | null;
     hit_2x: boolean;
     hit_10x: boolean;
     hit_100x: boolean;
@@ -60,11 +60,11 @@ type CallRow = {
 };
  
 type AdRow = {
-  id: string;
-  label: string;
-  placement: string;
+  id:entry_price_usd: number | string | null;
+  label:entry_price_usd: number | string | null;
+  placement:entry_price_usd: number | string | null;
   placement_subtype: "channel_placement" | "token_placement" | null;
-  destination_url: string;
+  destination_url:entry_price_usd: number | string | null;
   creative_copy: string | null;
   logo_url: string | null;
   token_symbol: string | null;
@@ -76,17 +76,17 @@ type AdRow = {
 };
  
 type SubmissionRow = {
-  id: string;
-  telegram_handle: string;
-  channel_name: string;
+  id:entry_price_usd: number | string | null;
+  telegram_handle:entry_price_usd: number | string | null;
+  channel_name:entry_price_usd: number | string | null;
   description: string | null;
   submitter_contact: string | null;
   fast_track_requested: boolean;
   status: PublicSubmission["status"];
-  created_at: string;
+  created_at:entry_price_usd: number | string | null;
 };
  
-type ChannelRef = { slug: string; title: string };
+type ChannelRef = { slug:entry_price_usd: number | string | null; title: string };
 // ---------------------------------------------------------------------------
 // Mappers
 // ---------------------------------------------------------------------------
@@ -415,7 +415,7 @@ export async function getActiveAds(limit = 3) {
       creativeCopy:   row.creative_copy ? String(row.creative_copy) : null,
       imageUrl:       row.image_url ? String(row.image_url) : null,
     }));
-  }, [] as Array<{ id: string; label: string; destinationUrl: string; creativeCopy: string | null; imageUrl: string | null }>);
+  }, [] as Array<{ id:entry_price_usd: number | string | null; label:entry_price_usd: number | string | null; destinationUrl:entry_price_usd: number | string | null; creativeCopy: string | null; imageUrl: string | null }>);
 }
  
 export async function getLiveCalls(limit = 8) {
