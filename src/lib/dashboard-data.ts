@@ -459,11 +459,14 @@ export async function getLiveCalls(limit = 8) {
  
 export async function getTrendingTokens(limit = 6, orderBy: "unique_channels" | "total_calls" | "average_roi_pct" | "best_multiple" = "unique_channels") {
   return withSupabase(async (supabase) => {
+    // The production materialized view exposes avg_roi_pct (not average_roi_pct).
+    // Keep the public function argument stable and translate it at the DB boundary.
+    const databaseOrderBy = orderBy === "average_roi_pct" ? "avg_roi_pct" : orderBy;
     const { data, error } = await supabase
       .from("trending_tokens")
       .select("*")
-      .order(orderBy,       { ascending: false })
-      .order("total_calls", { ascending: false })
+      .order(databaseOrderBy, { ascending: false })
+      .order("total_calls",  { ascending: false })
       .limit(limit);
  
     if (error) throw error;
@@ -481,7 +484,7 @@ export async function getTrendingTokens(limit = 6, orderBy: "unique_channels" | 
           : WELL_KNOWN_TOKEN_LOGOS[symbol.toUpperCase()] ?? null,
         totalCalls:      toNumber(row.total_calls),
         uniqueChannels:  toNumber(row.unique_channels),
-        averageRoiPct:   toNumber(row.average_roi_pct),
+        averageRoiPct:   toNumber(row.avg_roi_pct),
         bestMultiple:    toNumber(row.best_multiple, 1),
         lastCalledAt:    row.last_called_at  ? String(row.last_called_at)  : null,
       } satisfies TrendingToken;
