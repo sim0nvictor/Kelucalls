@@ -74,12 +74,7 @@ export function parseDexPairSnapshot(pair) {
   if (priceUsd === null) return null;
 
   const marketCap = Number(pair.marketCap);
-  const fdv = Number(pair.fdv);
-  const marketCapUsd = Number.isFinite(marketCap) && marketCap > 0
-    ? marketCap
-    : Number.isFinite(fdv) && fdv > 0
-      ? fdv
-      : null;
+  const marketCapUsd = Number.isFinite(marketCap) && marketCap > 0 ? marketCap : null;
 
   return {
     priceUsd,
