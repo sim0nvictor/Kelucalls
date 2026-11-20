@@ -411,7 +411,7 @@ async function updateCallMetrics(supabase, updates) {
       channelId: update.channelId,
       tokenId: update.tokenId,
       priorPeakMultiple,
-      newPeakMultiple: peakMultiple,
+      newPeakMultiple: performance.peakMultiple,
     });
 
     await supabase
