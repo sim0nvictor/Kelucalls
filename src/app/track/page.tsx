@@ -52,8 +52,8 @@ type TrackedResult = {
   isVerified: boolean;
   totalCalls: number;
   winRatePct: number;
-  averageRoiPct: number;
-  averagePeakRoiPct: number;
+  averageRoiPct: number | null;
+  averagePeakRoiPct: number | null;
   bestMultiple: number;
   rankingScore: number;
   hit2xCount: number;
