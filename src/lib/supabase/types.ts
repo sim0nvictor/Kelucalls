@@ -231,9 +231,9 @@ export interface Database {
           wins?: number;
           losses?: number;
           win_rate_pct?: number;
-          average_roi_pct?: number;
-          median_roi_pct?: number;
-          average_peak_roi_pct?: number;
+          average_roi_pct?: number | null;
+          median_roi_pct?: number | null;
+          average_peak_roi_pct?: number | null;
           average_multiple?: number;
           best_multiple?: number;
           hit_2x_count?: number;
