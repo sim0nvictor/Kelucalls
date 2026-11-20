@@ -458,7 +458,7 @@ async function insertCall({
       hit_10x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
       hit_50x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
       hit_100x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
-      simulated_investment_usd: 10,
+      simulated_investment_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 10 : null,
       simulated_current_value_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 10 : null,
       simulated_peak_value_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 10 : null,
       simulated_current_pnl_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 0 : null,
