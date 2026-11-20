@@ -232,12 +232,12 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
                       </time>
                     </td>
                     <td
-                      className={`px-2 py-3 text-right font-mono text-xs tabular-nums sm:px-4 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-300" : call.currentRoiPct < 0 ? "text-rose-300" : "text-slate-300"}`}
+                      className={`px-2 py-3 text-right font-mono text-xs tabular-nums sm:px-4 sm:text-sm ${call.currentRoiPct == null ? "text-slate-500" : call.currentRoiPct > 0 ? "text-emerald-300" : call.currentRoiPct < 0 ? "text-rose-300" : "text-slate-300"}`}
                     >
-                      {pct(call.currentRoiPct)}
+                      {call.currentRoiPct == null ? "—" : pct(call.currentRoiPct)}
                     </td>
                     <td className="px-2 py-3 text-right font-mono text-xs tabular-nums text-slate-300 sm:px-4 sm:text-sm">
-                      {call.peakMultiple.toFixed(2)}x
+                      {call.peakMultiple == null ? "—" : `${call.peakMultiple.toFixed(2)}x`}
                     </td>
                   </DataTableRow>
                 ))}
