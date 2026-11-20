@@ -40,11 +40,11 @@ export type LiveCall = {
   tokenSymbol: string;
   tokenLogoUrl: string | null;
   contractAddress: string | null;
-  entryPriceUsd: number;
+  entryPriceUsd: number | null;
   currentPriceUsd: number | null;
   peakPriceUsd: number | null;
-  currentRoiPct: number;
-  peakMultiple: number;
+  currentRoiPct: number | null;
+  peakMultiple: number | null;
   hit2x: boolean;
   hit10x: boolean;
   hit100x: boolean;
