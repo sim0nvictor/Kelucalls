@@ -167,7 +167,7 @@ export interface Database {
           hit_10x: boolean | null;
           hit_50x: boolean | null;
           hit_100x: boolean | null;
-          simulated_investment_usd: number;
+          simulated_investment_usd: number | null;
           simulated_current_value_usd: number | null;
           simulated_peak_value_usd: number | null;
           simulated_current_pnl_usd: number | null;
@@ -190,7 +190,7 @@ export interface Database {
           hit_10x?: boolean | null;
           hit_50x?: boolean | null;
           hit_100x?: boolean | null;
-          simulated_investment_usd?: number;
+          simulated_investment_usd?: number | null;
           simulated_current_value_usd?: number | null;
           simulated_peak_value_usd?: number | null;
           simulated_current_pnl_usd?: number | null;
