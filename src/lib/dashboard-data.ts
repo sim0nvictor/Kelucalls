@@ -35,7 +35,7 @@ type ChannelRow = {
 type CallRow = {
   id: string;
   called_at: string;
-  entry_price_usd: number | string;
+  entry_price_usd: number | string | null;
   // PostgREST returns these as a plain object (one-to-one FK) or array
   // depending on how the relationship is defined. Handle both defensively.
   channels: Array<{ slug: string; title: string }> | { slug: string; title: string } | null;
@@ -167,11 +167,11 @@ function mapLiveCall(row: CallRow): LiveCall {
       ?? WELL_KNOWN_TOKEN_LOGOS[symbol.toUpperCase()]
       ?? null,
     contractAddress: token?.contract_address ?? null,
-    entryPriceUsd:   toNumber(row.entry_price_usd),
+    entryPriceUsd:   toNumber(row.entry_price_usd, null),
     currentPriceUsd: metrics?.current_price_usd == null ? null : toNumber(metrics.current_price_usd),
     peakPriceUsd:    metrics?.peak_price_usd    == null ? null : toNumber(metrics.peak_price_usd),
-    currentRoiPct:   toNumber(metrics?.current_roi_pct),
-    peakMultiple:    toNumber(metrics?.peak_multiple, 1),
+    currentRoiPct:   toNumber(metrics?.current_roi_pct, null),
+    peakMultiple:    toNumber(metrics?.peak_multiple, null),
     hit2x:           Boolean(metrics?.hit_2x),
     hit10x:          Boolean(metrics?.hit_10x),
     hit100x:         Boolean(metrics?.hit_100x)
