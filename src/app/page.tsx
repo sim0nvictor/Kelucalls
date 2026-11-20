@@ -172,8 +172,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <td className="max-w-44 px-1.5 py-2 text-xs sm:px-3 sm:py-3 sm:text-sm"><Link href={`/channels/${call.channelSlug}`} className="block truncate text-cyan-300 hover:text-cyan-200">{call.channelTitle}</Link></td>
               <td className="hidden px-3 py-3 text-right font-medium text-slate-300 sm:table-cell">{formatTablePrice(call.entryPriceUsd)}</td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-medium tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatTablePrice(call.currentPriceUsd)}</td>
-              <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{formatCompactPercent(call.currentRoiPct)}</td>
-              <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{formatMultiple(call.peakMultiple)}</td>
+              <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct == null ? "text-slate-500" : call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{call.currentRoiPct == null ? "—" : formatCompactPercent(call.currentRoiPct)}</td>
+              <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{call.peakMultiple == null ? "—" : formatMultiple(call.peakMultiple)}</td>
               <td className="hidden whitespace-nowrap px-3 py-3 text-right text-xs text-slate-400 last:pr-4 sm:table-cell">{new Date(call.calledAt).toLocaleTimeString()}</td>
             </DataTableRow>
           ))}</tbody>
