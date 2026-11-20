@@ -32,13 +32,15 @@ export async function getTrendingTokens(
   const supabase = getSupabaseServer();
   const { from, to } = paginationRange(pagination?.page, pagination?.pageSize);
   const sortBy = sort?.sortBy ?? "unique_channels";
+  // Preserve the app-facing sort key while querying the materialized view's real column.
+  const databaseSortBy = sortBy === "average_roi_pct" ? "avg_roi_pct" : sortBy;
 
   let query = supabase.from("trending_tokens").select("*", { count: "exact" });
   if (filter?.chain) query = query.eq("chain", filter.chain);
   if (filter?.minCalls) query = query.gte("total_calls", filter.minCalls);
   if (filter?.minChannels) query = query.gte("unique_channels", filter.minChannels);
 
-  const { data, error, count } = await query.order(sortBy, { ascending: sort?.sortOrder === "asc" }).range(from, to);
+  const { data, error, count } = await query.order(databaseSortBy, { ascending: sort?.sortOrder === "asc" }).range(from, to);
   if (error) { console.error("[query/trending]", error.message); return emptyPage(pagination?.page, pagination?.pageSize); }
 
   const total = count ?? 0;

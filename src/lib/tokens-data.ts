@@ -107,7 +107,7 @@ export async function getTokenMarketRows(limit = 200): Promise<TokenMarketRow[]>
           null,
         totalCalls: numberOrZero(row.total_calls),
         uniqueChannels: numberOrZero(row.unique_channels),
-        averageRoiPct: numberOrZero(row.average_roi_pct),
+        averageRoiPct: numberOrZero(row.avg_roi_pct),
         bestMultiple: numberOrZero(row.best_multiple, 1),
         lastCalledAt: stringOrNull(row.last_called_at),
         lastPriceUsd: price?.lastPriceUsd ?? null,

@@ -73,7 +73,7 @@ type TrendingTokenRow = {
   contract_address: string | null;
   total_calls: number | string | null;
   unique_channels: number | string | null;
-  average_roi_pct: number | string | null;
+  avg_roi_pct: number | string | null;
   best_multiple: number | string | null;
   last_called_at: string | null;
 };
@@ -121,7 +121,7 @@ function mapTrendingToken(row: TrendingTokenRow): KelucallsTokenMetric {
     contractAddress: row.contract_address ? String(row.contract_address) : null,
     totalCalls: toNumber(row.total_calls),
     uniqueChannels: toNumber(row.unique_channels),
-    averageRoiPct: readNullableNumber(row.average_roi_pct),
+    averageRoiPct: readNullableNumber(row.avg_roi_pct),
     bestMultiple: readNullableNumber(row.best_multiple),
     lastCalledAt: row.last_called_at ? String(row.last_called_at) : null
   };
@@ -343,7 +343,7 @@ export async function getKelucallsSnapshot(): Promise<KelucallsSnapshot | null> 
       const { data: trendingRows, error: trendingError } = await supabase
         .from("trending_tokens")
         .select(
-          "id, symbol, name, chain, contract_address, total_calls, unique_channels, average_roi_pct, best_multiple, last_called_at"
+          "id, symbol, name, chain, contract_address, total_calls, unique_channels, avg_roi_pct, best_multiple, last_called_at"
         )
         .order("unique_channels", { ascending: false })
         .order("total_calls", { ascending: false })
