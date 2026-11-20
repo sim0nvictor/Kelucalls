@@ -24,6 +24,7 @@ import {
   resolveAndStoreImage,
   resolveTelegramAvatar,
 } from "../workers/asset-store.js";
+import { parseDexPairSnapshot, selectDexPair } from "../workers/dexscreener.js";
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -478,7 +479,7 @@ async function insertCall({
  * Single request — previously `fetchEntryPrice` covered price only, and the
  * logo was never fetched anywhere in the pipeline. Returns null if unavailable.
  */
-async function fetchDexScreenerData(contractAddress) {
+async function fetchDexScreenerData(contractAddress, expectedChain) {
   if (!contractAddress) return null;
 
   try {
@@ -486,15 +487,16 @@ async function fetchDexScreenerData(contractAddress) {
       `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(contractAddress)}`,
       { signal: AbortSignal.timeout(8000) }
     );
+    if (!res.ok) return null;
+
     const data = await res.json();
-    const pair = data?.pairs?.[0];
-    if (!pair) return null;
+    const selected = selectDexPair(data?.pairs, expectedChain);
+    if (!selected.pair) return null;
 
-    const priceUsd = pair.priceUsd ? Number(pair.priceUsd) : null;
-    // DexScreener omits `info` on thin-liquidity / brand-new pairs — guard for it.
-    const logoUrl = pair.info?.imageUrl ?? null;
+    const snapshot = parseDexPairSnapshot(selected.pair);
+    if (!snapshot) return null;
 
-    return { priceUsd, logoUrl };
+    return { priceUsd: snapshot.priceUsd, logoUrl: snapshot.logoUrl };
   } catch {
     return null;
   }
@@ -696,7 +698,7 @@ async function handleMessage(channelId, message) {
   });
 
   // Get entry price + logo from DexScreener (single request covers both)
-  const dexData = await fetchDexScreenerData(parsed.contractAddress);
+  const dexData = await fetchDexScreenerData(parsed.contractAddress, parsed.chain);
   const entryPriceUsd = dexData?.priceUsd ?? null;
 
   // Upsert token
