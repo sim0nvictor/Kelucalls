@@ -24,6 +24,7 @@ import {
   startWorkerRun,
 } from "./worker-utils.js";
 import { normalizeDexChain, parseDexPairSnapshot, selectDexPair } from "./dexscreener.js";
+import { calculateCallPerformance } from "./price-metrics.js";
 
 const PROCESS_ENV_ONLY = process.env.PRICE_WORKER_NO_DOTENV === "true";
 loadWorkerEnv(import.meta.url, { loadDotenvFiles: !PROCESS_ENV_ONLY });
@@ -365,13 +366,14 @@ async function updateCallMetrics(supabase, updates) {
       ? update.currentPrice
       : Math.max(priorPeak, update.currentPrice);
 
-    // A current market quote is not a historical entry quote. Never invent an
-    // entry price from a later observation: keep market data fresh while ROI
-    // and simulated PnL remain unavailable until a real entry is recorded.
-    const currentMultiple = hasValidEntry ? update.currentPrice / entryPrice : null;
-    const peakMultiple = hasValidEntry ? peakPrice / entryPrice : null;
-    const currentValue = hasValidEntry ? 10 * currentMultiple : null;
-    const peakValue = hasValidEntry ? 10 * peakMultiple : null;
+    // A current market quote is not a historical call entry. Derived metrics
+    // stay null until the call has a valid recorded entry price.
+    const performance = calculateCallPerformance({
+      entryPriceUsd: update.entryPriceUsd,
+      currentPriceUsd: update.currentPrice,
+      peakPriceUsd: peakPrice,
+      investmentUsd: 10,
+    });
 
     const { error } = await supabase
       .from("call_metrics")
@@ -381,21 +383,21 @@ async function updateCallMetrics(supabase, updates) {
         current_market_cap_usd: update.currentMarketCapUsd,
         peak_price_usd: peakPrice,
         peak_market_cap_usd: update.currentMarketCapUsd,
-        current_roi_pct: hasValidEntry ? ((update.currentPrice - entryPrice) / entryPrice) * 100 : null,
-        peak_roi_pct: hasValidEntry ? ((peakPrice - entryPrice) / entryPrice) * 100 : null,
-        current_multiple: currentMultiple,
-        peak_multiple: peakMultiple,
-        is_win: hasValidEntry ? currentMultiple >= 1 : null,
-        hit_2x: hasValidEntry ? peakMultiple >= 2 : null,
-        hit_5x: hasValidEntry ? peakMultiple >= 5 : null,
-        hit_10x: hasValidEntry ? peakMultiple >= 10 : null,
-        hit_50x: hasValidEntry ? peakMultiple >= 50 : null,
-        hit_100x: hasValidEntry ? peakMultiple >= 100 : null,
+        current_roi_pct: performance.currentRoiPct,
+        peak_roi_pct: performance.peakRoiPct,
+        current_multiple: performance.currentMultiple,
+        peak_multiple: performance.peakMultiple,
+        is_win: performance.isWin,
+        hit_2x: performance.hit2x,
+        hit_5x: performance.hit5x,
+        hit_10x: performance.hit10x,
+        hit_50x: performance.hit50x,
+        hit_100x: performance.hit100x,
         simulated_investment_usd: 10,
-        simulated_current_value_usd: currentValue,
-        simulated_peak_value_usd: peakValue,
-        simulated_current_pnl_usd: hasValidEntry ? currentValue - 10 : null,
-        simulated_peak_pnl_usd: hasValidEntry ? peakValue - 10 : null,
+        simulated_current_value_usd: performance.simulatedCurrentValueUsd,
+        simulated_peak_value_usd: performance.simulatedPeakValueUsd,
+        simulated_current_pnl_usd: performance.simulatedCurrentPnlUsd,
+        simulated_peak_pnl_usd: performance.simulatedPeakPnlUsd,
         refreshed_at: new Date().toISOString(),
       }, { onConflict: "call_id" });
 
