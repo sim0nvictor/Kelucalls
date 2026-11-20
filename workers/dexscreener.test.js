@@ -52,19 +52,18 @@ test("reports missing pairs and invalid prices separately", () => {
   assert.equal(selectDexPair([{ chainId: "solana", priceUsd: null }], "solana").reason, "invalid_price");
 });
 
-test("parses price and uses FDV only when market cap is absent", () => {
+test("parses price without treating FDV as market cap", () => {
   const snapshot = parseDexPairSnapshot({
     chainId: "base",
     priceUsd: "0.000001",
     marketCap: null,
-    fdv: 125_000,
     liquidity: { usd: 8_000 },
     info: { imageUrl: "https://example.com/token.png" },
   });
 
   assert.deepEqual(snapshot, {
     priceUsd: 0.000001,
-    marketCapUsd: 125_000,
+    marketCapUsd: null,
     chain: "base",
     logoUrl: "https://example.com/token.png",
     pairAddress: null,
