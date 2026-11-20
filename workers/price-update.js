@@ -342,8 +342,9 @@ async function persistHistoricalObservations(supabase, observations) {
 }
 
 async function updateCallMetrics(supabase, updates) {
-  if (updates.length === 0) return;
+  if (updates.length === 0) return 0;
 
+  let written = 0;
   for (const update of updates) {
     const { data: existing } = await supabase
       .from("call_metrics")
@@ -406,6 +407,8 @@ async function updateCallMetrics(supabase, updates) {
       continue;
     }
 
+    written += 1;
+
     await insertMilestoneEvents(supabase, {
       callId: update.callId,
       channelId: update.channelId,
@@ -423,6 +426,8 @@ async function updateCallMetrics(supabase, updates) {
       })
       .eq("id", update.tokenId);
   }
+
+  return written;
 }
 
 async function markCallsRefreshed(supabase, callIds) {
@@ -458,6 +463,7 @@ async function runPriceUpdate(supabase, runningRef) {
 
   const summary = {
     processed: 0,
+    priced: 0,
     updated: 0,
     unpriced: 0,
     durationMs: 0,
@@ -473,6 +479,7 @@ async function runPriceUpdate(supabase, runningRef) {
     const snapshotCache = new Map();
     const unpricedReasons = { no_pairs: 0, chain_mismatch: 0, invalid_price: 0, provider_error: 0 };
     let processed = 0;
+    let priced = 0;
     let updated = 0;
     let unpriced = 0;
 
@@ -503,7 +510,7 @@ async function runPriceUpdate(supabase, runningRef) {
           currentMarketCapUsd: snapshot.marketCapUsd,
           logoUrl: snapshot.logoUrl,
         });
-        updated += 1;
+        priced += 1;
 
         if (call.token_id) {
           historicalObservations.set(call.token_id, {
@@ -522,13 +529,13 @@ async function runPriceUpdate(supabase, runningRef) {
 
       processed += 1;
       if (updates.length >= BATCH_SIZE) {
-        await updateCallMetrics(supabase, updates);
+        updated += await updateCallMetrics(supabase, updates);
         updates.length = 0;
       }
     }
 
     if (updates.length > 0) {
-      await updateCallMetrics(supabase, updates);
+      updated += await updateCallMetrics(supabase, updates);
     }
 
     if (unpricedCallIds.length > 0) {
@@ -548,18 +555,23 @@ async function runPriceUpdate(supabase, runningRef) {
     }
 
     summary.processed = processed;
+    summary.priced = priced;
     summary.updated = updated;
     summary.unpriced = unpriced;
     summary.unpricedReasons = unpricedReasons;
+    summary.priceCoveragePct = processed > 0 ? Number(((priced / processed) * 100).toFixed(2)) : 0;
+    summary.metricsWriteCoveragePct = processed > 0 ? Number(((updated / processed) * 100).toFixed(2)) : 0;
+    summary.partial = unpriced > 0 || updated < processed;
     summary.durationMs = Date.now() - startedAt;
 
-    const runStatus = (processed > 0 && (updated > 0 || unpriced > 0)) ? "succeeded" : "failed";
+    const runStatus = processed > 0 && updated > 0 ? "succeeded" : "failed";
 
     log(LOG_LEVELS.INFO, WORKER_NAME, "Price update complete", { ...summary, status: runStatus });
     await finishWorkerRun(supabase, WORKER_NAME, runId, runStatus, summary);
     return summary;
   } catch (error) {
     summary.processed = 0;
+    summary.priced = 0;
     summary.updated = 0;
     summary.unpriced = 0;
     summary.durationMs = Date.now() - startedAt;
