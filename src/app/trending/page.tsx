@@ -258,8 +258,8 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                         </div>
                         <div>
                           <div className="text-slate-500">Avg ROI</div>
-                          <div className={`font-semibold ${topGainer.averageRoiPct > 0 ? "text-emerald-400" : topGainer.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
-                            {formatPercent(topGainer.averageRoiPct)}
+                          <div className={`font-semibold ${topGainer.averageRoiPct == null ? "text-slate-500" : topGainer.averageRoiPct > 0 ? "text-emerald-400" : topGainer.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
+                            {topGainer.averageRoiPct == null ? "—" : formatPercent(topGainer.averageRoiPct)}
                           </div>
                         </div>
                       </div>
