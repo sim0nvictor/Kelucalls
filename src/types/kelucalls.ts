@@ -58,7 +58,7 @@ export type TrendingToken = {
   contractAddress: string | null;
   totalCalls: number;
   uniqueChannels: number;
-  averageRoiPct: number;
+  averageRoiPct: number | null;
   bestMultiple: number;
   lastCalledAt: string | null;
   logoUrl: string | null;
