@@ -26,8 +26,8 @@ test("calculates current and peak ROI from the recorded entry price", () => {
     investmentUsd: 10,
   });
 
-  assert.equal(result.currentRoiPct, 50);
-  assert.equal(result.peakRoiPct, 100);
+  assert.ok(Math.abs(result.currentRoiPct - 50) < 1e-9);
+  assert.ok(Math.abs(result.peakRoiPct - 100) < 1e-9);
   assert.equal(result.currentMultiple, 1.5);
   assert.equal(result.peakMultiple, 2);
   assert.equal(result.isWin, true);
