@@ -391,7 +391,7 @@ async function updateCallMetrics(supabase, updates) {
         hit_10x: performance.hit10x,
         hit_50x: performance.hit50x,
         hit_100x: performance.hit100x,
-        simulated_investment_usd: 10,
+        simulated_investment_usd: performance.currentRoiPct == null ? null : 10,
         simulated_current_value_usd: performance.simulatedCurrentValueUsd,
         simulated_peak_value_usd: performance.simulatedPeakValueUsd,
         simulated_current_pnl_usd: performance.simulatedCurrentPnlUsd,
