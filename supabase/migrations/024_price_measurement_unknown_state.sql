@@ -2,6 +2,12 @@ begin;
 
 -- Stage B: distinguish an unmeasurable call from a genuine 0% return.
 -- ROI and derived performance fields are nullable until both prices are known.
+-- Channel aggregates must also represent "no measurable calls" as NULL.
+alter table public.channel_stats
+  alter column average_roi_pct drop not null,
+  alter column median_roi_pct drop not null,
+  alter column average_peak_roi_pct drop not null;
+
 alter table public.call_metrics
   alter column current_roi_pct drop not null,
   alter column peak_roi_pct drop not null,
@@ -110,10 +116,10 @@ begin
     count(c.id) filter (where cm.hit_50x is true)::integer,
     count(c.id) filter (where cm.hit_100x is true)::integer,
     coalesce(sum(cm.simulated_investment_usd), 0)::numeric(16, 4),
-    sum(cm.simulated_current_value_usd)::numeric(16, 4),
-    sum(cm.simulated_peak_value_usd)::numeric(16, 4),
-    sum(cm.simulated_current_pnl_usd)::numeric(16, 4),
-    sum(cm.simulated_peak_pnl_usd)::numeric(16, 4),
+    coalesce(sum(cm.simulated_current_value_usd), 0)::numeric(16, 4),
+    coalesce(sum(cm.simulated_peak_value_usd), 0)::numeric(16, 4),
+    coalesce(sum(cm.simulated_current_pnl_usd), 0)::numeric(16, 4),
+    coalesce(sum(cm.simulated_peak_pnl_usd), 0)::numeric(16, 4),
     (
       case
         when ch.is_paid_channel then 0
