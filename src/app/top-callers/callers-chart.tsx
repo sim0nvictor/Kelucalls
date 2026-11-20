@@ -32,7 +32,7 @@ export function TopCallersChart({ channels }: TopCallersChartProps) {
   const data = channels.slice(0, 8).map((ch) => ({
     name: ch.title.length > 15 ? ch.title.slice(0, 15) + "..." : ch.title,
     fullName: ch.title,
-    roi: parseFloat(ch.averageRoiPct.toFixed(1)),
+    roi: ch.averageRoiPct == null ? null : parseFloat(ch.averageRoiPct.toFixed(1)),
     winRate: ch.winRatePct,
     calls: ch.totalCalls
   }));
