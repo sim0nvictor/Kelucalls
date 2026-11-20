@@ -353,9 +353,6 @@ async function updateCallMetrics(supabase, updates) {
 
     if (!Number.isFinite(update.currentPrice) || update.currentPrice <= 0) continue;
 
-    const entryPrice = Number(update.entryPriceUsd);
-    const hasValidEntry = Number.isFinite(entryPrice) && entryPrice > 0;
-
     const priorPeak = existing?.peak_price_usd == null
       ? null
       : Number(existing.peak_price_usd);
