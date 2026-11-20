@@ -16,9 +16,9 @@ export type ChannelSummary = {
   rankingScore: number | null;
   totalCalls: number;
   winRatePct: number;
-  averageRoiPct: number;
+  averageRoiPct: number | null;
   medianRoiPct: number | null;
-  averagePeakRoiPct: number;
+  averagePeakRoiPct: number | null;
   averageMultiple: number;
   bestMultiple: number;
   hit2xCount: number;
