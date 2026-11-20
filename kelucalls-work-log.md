@@ -1212,3 +1212,13 @@ A current market quote cannot be used as a historical call entry. Preserving unk
 The 7,159 calls without both entry/current prices cannot be reconstructed from the available observation history: only 4 of the 7,171 missing-entry open calls had any token observation before the call timestamp, and none had an observation within ten minutes after the call. A separate historical-price provider/backfill may be needed for these legacy calls. Do not synthesize their entry prices from today's quotes.
 
 Next: run `npm run test:price`, `npm run lint`, `npm run typecheck`, and `npm run build`; inspect the migration; review the pull request; apply migration 024 before deploying the updated worker and scraper. Then compare unpriced-reason counts and price coverage over several worker cycles.
+
+
+### Stage B Follow-up Review (2026-11-20)
+
+- Read the live production definition of `refresh_channel_stats(uuid)` before replacing it. Migration 024 preserves the existing insert/update population and ranking-score weights, while changing the measurable population semantics: unmeasurable ROI/peak ROI become NULL, and unknown win states are excluded from wins, losses, and win-rate averages.
+- Read the live `refresh_public_analytics()` definition. It refreshes channel stats first and then refreshes `trending_tokens`; the updated worker continues to call this RPC after each cycle.
+- Made channel aggregate ROI columns nullable and updated ChannelSummary, API, channel list/detail, Top Callers, schema metadata, and tracking-result UI so channels with no measurable ROI show an em dash rather than 0%.
+- Made simulated investment itself nullable for calls without a recorded entry price. The migration cleans existing unmeasurable values and the scraper/worker write NULL for future unmeasurable calls.
+- Improved worker-run details: `priced` counts valid market quotes, `updated` counts successful call_metrics writes, and the summary records `priceCoveragePct`, `metricsWriteCoveragePct`, `partial`, and unpriced reason counts. A cycle with zero successful metric writes is now recorded as failed; partial coverage remains visible in details.
+- Focused pure-logic tests were executed in an isolated Node test harness: 9 passed, 0 failed. The test assertions were adjusted to account for normal floating-point representation. This is not a substitute for running the repository's full `npm run test:price`, lint, typecheck, and build in a full checkout.
