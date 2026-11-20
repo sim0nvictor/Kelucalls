@@ -111,12 +111,12 @@ async function getTokenData(address: string) {
         return {
           id: c.id,
           calledAt: c.called_at,
-          entryPriceUsd: toNumber(c.entry_price_usd),
+          entryPriceUsd: toNumber(c.entry_price_usd, null),
           channelSlug: ch?.slug ?? "unknown",
           channelTitle: ch?.title ?? "Unknown channel",
           channelTelegramUrl: ch?.telegram_url ?? null,
-          currentRoiPct: toNumber(m?.current_roi_pct),
-          peakMultiple: toNumber(m?.peak_multiple, 1),
+          currentRoiPct: toNumber(m?.current_roi_pct, null),
+          peakMultiple: toNumber(m?.peak_multiple, null),
           hit2x: Boolean(m?.hit_2x),
           hit10x: Boolean(m?.hit_10x),
           hit100x: Boolean(m?.hit_100x),
@@ -304,14 +304,14 @@ export default async function TokenDetailPage({ params }: PageProps) {
                   <div className="flex flex-wrap items-center gap-3 text-right">
                     <div>
                       <div className="text-xs text-slate-500">ROI</div>
-                      <div className={call.currentRoiPct > 0 ? "text-lg font-semibold text-emerald-300" : call.currentRoiPct < 0 ? "text-lg font-semibold text-red-400" : "text-lg font-semibold text-slate-300"}>
-                        {formatPercent(call.currentRoiPct)}
+                      <div className={call.currentRoiPct == null ? "text-lg font-semibold text-slate-500" : call.currentRoiPct > 0 ? "text-lg font-semibold text-emerald-300" : call.currentRoiPct < 0 ? "text-lg font-semibold text-red-400" : "text-lg font-semibold text-slate-300"}>
+                        {call.currentRoiPct == null ? "—" : formatPercent(call.currentRoiPct)}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-500">Peak</div>
                       <div className="text-lg font-semibold text-white">
-                        {formatMultiple(call.peakMultiple)}
+                        {call.peakMultiple == null ? "—" : formatMultiple(call.peakMultiple)}
                       </div>
                     </div>
                   </div>
