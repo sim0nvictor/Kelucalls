@@ -495,7 +495,7 @@ export interface Database {
           total_calls: number;
           unique_channels: number;
           last_called_at: string | null;
-          avg_roi_pct: number;
+          avg_roi_pct: number | null;
           best_multiple: number;
         };
       };
