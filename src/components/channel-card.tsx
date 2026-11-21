@@ -103,8 +103,8 @@ export function ChannelCard({ channel, rank }: ChannelCardProps) {
           <StatPill
             label="Avg ROI"
             value={
-              <span className={channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}>
-                {formatPercent(channel.averageRoiPct)}
+              <span className={channel.averageRoiPct == null ? "text-slate-500" : channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}>
+                {channel.averageRoiPct == null ? "—" : formatPercent(channel.averageRoiPct)}
               </span>
             }
           />

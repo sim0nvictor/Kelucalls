@@ -1,11 +1,11 @@
 /**
  * External signal collectors for the KeluScore engine.
  *
- * Reuse note: workers/price-update.js already calls the Dexscreener token
- * endpoint, but only reads priceUsd, marketCap, chainId and info.imageUrl. It
- * discards volume, liquidity and info.socials. This module reads the SAME
- * endpoint and extracts the discarded fields. No new provider is introduced
- * and price-update.js is left completely untouched.
+ * Reuse note: `workers/price-update.js` and `scraper/index.js` use the shared
+ * `workers/dexscreener.js` pair selector for chain-aware price measurements.
+ * This collector reads the same DexScreener token endpoint and extracts
+ * liquidity, volume and social fields for the KeluScore engine. No new
+ * provider is introduced.
  *
  * Every collector follows the same contract:
  *   - resolve to a plain object of signals, or null when unavailable

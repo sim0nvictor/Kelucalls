@@ -24,6 +24,7 @@ import {
   resolveAndStoreImage,
   resolveTelegramAvatar,
 } from "../workers/asset-store.js";
+import { parseDexPairSnapshot, selectDexPair } from "../workers/dexscreener.js";
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -447,21 +448,21 @@ async function insertCall({
       call_id: callRow.id,
       current_price_usd: entryPriceUsd ?? null,
       peak_price_usd: entryPriceUsd ?? null,
-      current_roi_pct: 0,
-      peak_roi_pct: 0,
-      current_multiple: 1,
-      peak_multiple: 1,
-      is_win: false,
-      hit_2x: false,
-      hit_5x: false,
-      hit_10x: false,
-      hit_50x: false,
-      hit_100x: false,
-      simulated_investment_usd: 10,
-      simulated_current_value_usd: 10,
-      simulated_peak_value_usd: 10,
-      simulated_current_pnl_usd: 0,
-      simulated_peak_pnl_usd: 0,
+      current_roi_pct: entryPriceUsd != null && entryPriceUsd > 0 ? 0 : null,
+      peak_roi_pct: entryPriceUsd != null && entryPriceUsd > 0 ? 0 : null,
+      current_multiple: entryPriceUsd != null && entryPriceUsd > 0 ? 1 : null,
+      peak_multiple: entryPriceUsd != null && entryPriceUsd > 0 ? 1 : null,
+      is_win: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
+      hit_2x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
+      hit_5x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
+      hit_10x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
+      hit_50x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
+      hit_100x: entryPriceUsd != null && entryPriceUsd > 0 ? false : null,
+      simulated_investment_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 10 : null,
+      simulated_current_value_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 10 : null,
+      simulated_peak_value_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 10 : null,
+      simulated_current_pnl_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 0 : null,
+      simulated_peak_pnl_usd: entryPriceUsd != null && entryPriceUsd > 0 ? 0 : null,
     }, { onConflict: "call_id" });
 
   if (metricsError) {
@@ -478,26 +479,40 @@ async function insertCall({
  * Single request — previously `fetchEntryPrice` covered price only, and the
  * logo was never fetched anywhere in the pipeline. Returns null if unavailable.
  */
-async function fetchDexScreenerData(contractAddress) {
+async function fetchDexScreenerData(contractAddress, expectedChain) {
   if (!contractAddress) return null;
 
-  try {
-    const res = await fetch(
-      `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(contractAddress)}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    const data = await res.json();
-    const pair = data?.pairs?.[0];
-    if (!pair) return null;
+  const endpoint = `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(contractAddress)}`;
 
-    const priceUsd = pair.priceUsd ? Number(pair.priceUsd) : null;
-    // DexScreener omits `info` on thin-liquidity / brand-new pairs — guard for it.
-    const logoUrl = pair.info?.imageUrl ?? null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const res = await fetch(endpoint, { signal: AbortSignal.timeout(6000) });
 
-    return { priceUsd, logoUrl };
-  } catch {
-    return null;
+      if (!res.ok) {
+        const transient = res.status === 408 || res.status === 409 || res.status === 425 || res.status === 429 || res.status >= 500;
+        if (transient && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+          continue;
+        }
+        return null;
+      }
+
+      const data = await res.json();
+      const selected = selectDexPair(data?.pairs, expectedChain);
+      if (!selected.pair) return null;
+
+      const snapshot = parseDexPairSnapshot(selected.pair);
+      if (!snapshot) return null;
+
+      return { priceUsd: snapshot.priceUsd, logoUrl: snapshot.logoUrl };
+    } catch {
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      }
+    }
   }
+
+  return null;
 }
 
 /**
@@ -696,7 +711,7 @@ async function handleMessage(channelId, message) {
   });
 
   // Get entry price + logo from DexScreener (single request covers both)
-  const dexData = await fetchDexScreenerData(parsed.contractAddress);
+  const dexData = await fetchDexScreenerData(parsed.contractAddress, parsed.chain);
   const entryPriceUsd = dexData?.priceUsd ?? null;
 
   // Upsert token

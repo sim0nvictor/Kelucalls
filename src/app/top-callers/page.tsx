@@ -86,7 +86,7 @@ export default async function TopCallersPage() {
                     <div className="flex justify-between">
                       <span className="text-slate-500">Avg ROI</span>
                       <span className="font-medium text-emerald-400">
-                        {formatPercent(leaderboard[0].averageRoiPct)}
+                        {leaderboard[0].averageRoiPct == null ? "—" : formatPercent(leaderboard[0].averageRoiPct)}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -230,10 +230,10 @@ export default async function TopCallersPage() {
                     <td className="px-1 py-2 text-right sm:px-3 sm:py-3">
                       <span
                         className={`whitespace-nowrap font-mono text-xs font-medium tabular-nums sm:text-sm ${
-                          channel.averageRoiPct > 0 ? "text-emerald-400" : channel.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"
+                          channel.averageRoiPct == null ? "text-slate-500" : channel.averageRoiPct > 0 ? "text-emerald-400" : channel.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"
                         }`}
                       >
-                        {formatCompactPercent(channel.averageRoiPct)}
+                        {channel.averageRoiPct == null ? "—" : formatCompactPercent(channel.averageRoiPct)}
                       </span>
                     </td>
                     <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatPercent(channel.winRatePct)}</td>

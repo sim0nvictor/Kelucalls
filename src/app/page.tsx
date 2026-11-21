@@ -130,7 +130,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <tbody>{snapshot.trendingTokens.map((token) => (
             <DataTableRow key={token.id} interactive className="group">
               <td className="sticky left-0 z-10 w-[40%] bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:w-auto sm:px-3 sm:py-3"><TokenIdentity href={`/tokens?symbol=${token.symbol}`} symbol={token.symbol} name={token.name} logoUrl={token.logoUrl} chain={token.chain} className="min-h-11 gap-2" /></td>
-              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={token.averageRoiPct > 0 ? "text-emerald-300" : token.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{formatCompactPercent(token.averageRoiPct)}</span></td>
+              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={token.averageRoiPct == null ? "text-slate-500" : token.averageRoiPct > 0 ? "text-emerald-300" : token.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{token.averageRoiPct == null ? "—" : formatCompactPercent(token.averageRoiPct)}</span></td>
               <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(token.totalCalls)}</td>
               <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(token.uniqueChannels)}</td>
               <td className="hidden px-3 py-3 text-left text-slate-300 sm:table-cell">{token.chain}</td>
@@ -172,8 +172,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <td className="max-w-44 px-1.5 py-2 text-xs sm:px-3 sm:py-3 sm:text-sm"><Link href={`/channels/${call.channelSlug}`} className="block truncate text-cyan-300 hover:text-cyan-200">{call.channelTitle}</Link></td>
               <td className="hidden px-3 py-3 text-right font-medium text-slate-300 sm:table-cell">{formatTablePrice(call.entryPriceUsd)}</td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-medium tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatTablePrice(call.currentPriceUsd)}</td>
-              <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{formatCompactPercent(call.currentRoiPct)}</td>
-              <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{formatMultiple(call.peakMultiple)}</td>
+              <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct == null ? "text-slate-500" : call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{call.currentRoiPct == null ? "—" : formatCompactPercent(call.currentRoiPct)}</td>
+              <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{call.peakMultiple == null ? "—" : formatMultiple(call.peakMultiple)}</td>
               <td className="hidden whitespace-nowrap px-3 py-3 text-right text-xs text-slate-400 last:pr-4 sm:table-cell">{new Date(call.calledAt).toLocaleTimeString()}</td>
             </DataTableRow>
           ))}</tbody>
@@ -218,7 +218,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <td className="sticky left-[84px] z-10 bg-[#06101f] px-1.5 py-2 group-hover:bg-[#0b1c2a] sm:left-24 sm:px-3 sm:py-3"><ChannelIdentity href={`/channels/${channel.slug}`} title={channel.title} avatarUrl={channel.avatarUrl} description={`Telegram · ${formatNumber(channel.totalCalls)} calls`} className="min-h-11 gap-2" /></td>
               <td className="px-1 py-2 text-right font-mono text-xs tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">{formatNumber(channel.totalCalls)}</td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><PerformanceValue value={channel.winRatePct} /></td>
-              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{formatCompactPercent(channel.averageRoiPct)}</span></td>
+              <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={channel.averageRoiPct == null ? "text-slate-500" : channel.averageRoiPct > 0 ? "text-emerald-300" : channel.averageRoiPct < 0 ? "text-red-300" : "text-slate-300"}>{channel.averageRoiPct == null ? "—" : formatCompactPercent(channel.averageRoiPct)}</span></td>
               <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-xs tabular-nums sm:px-3 sm:py-3 sm:text-sm"><span className={channel.medianRoiPct !== null && channel.medianRoiPct > 0 ? "text-emerald-300" : channel.medianRoiPct !== null && channel.medianRoiPct < 0 ? "text-red-300" : "text-slate-400"}>{channel.medianRoiPct !== null ? formatCompactPercent(channel.medianRoiPct) : "—"}</span></td>
               <td className="hidden px-3 py-3 text-right text-slate-300 sm:table-cell">{formatMultiple(channel.bestMultiple)}</td>
               <td className="hidden px-3 py-3 text-right sm:table-cell"><PerformanceValue value={channel.simulatedCurrentPnlUsd} kind="currency" /></td>

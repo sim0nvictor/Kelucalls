@@ -35,7 +35,7 @@ type ChannelRow = {
 type CallRow = {
   id: string;
   called_at: string;
-  entry_price_usd: number | string;
+  entry_price_usd: number | string | null;
   // PostgREST returns these as a plain object (one-to-one FK) or array
   // depending on how the relationship is defined. Handle both defensively.
   channels: Array<{ slug: string; title: string }> | { slug: string; title: string } | null;
@@ -43,19 +43,19 @@ type CallRow = {
   call_metrics: Array<{
     current_price_usd: number | string | null;
     peak_price_usd: number | string | null;
-    current_roi_pct: number | string;
-    peak_multiple: number | string;
-    hit_2x: boolean;
-    hit_10x: boolean;
-    hit_100x: boolean;
+    current_roi_pct: number | string | null;
+    peak_multiple: number | string | null;
+    hit_2x: boolean | null;
+    hit_10x: boolean | null;
+    hit_100x: boolean | null;
   }> | {
     current_price_usd: number | string | null;
     peak_price_usd: number | string | null;
-    current_roi_pct: number | string;
-    peak_multiple: number | string;
-    hit_2x: boolean;
-    hit_10x: boolean;
-    hit_100x: boolean;
+    current_roi_pct: number | string | null;
+    peak_multiple: number | string | null;
+    hit_2x: boolean | null;
+    hit_10x: boolean | null;
+    hit_100x: boolean | null;
   } | null;
 };
  
@@ -95,7 +95,7 @@ function mapChannelSummary(row: ChannelRow): ChannelSummary {
   const stats = (Array.isArray(row.channel_stats)
   ? row.channel_stats[0]
   : row.channel_stats) ?? {};
-  const averageRoiPct = toNumber(stats.average_roi_pct);
+  const averageRoiPct = toNumber(stats.average_roi_pct, null);
   const winRatePct    = toNumber(stats.win_rate_pct);
   const totalCalls    = toNumber(stats.total_calls);
  
@@ -124,7 +124,7 @@ function mapChannelSummary(row: ChannelRow): ChannelSummary {
     totalCalls,
     winRatePct,
     averageRoiPct,
-    averagePeakRoiPct:        toNumber(stats.average_peak_roi_pct),
+    averagePeakRoiPct:        toNumber(stats.average_peak_roi_pct, null),
     averageMultiple:          toNumber(stats.average_multiple, 1),
     bestMultiple:             toNumber(stats.best_multiple, 1),
     hit2xCount:               toNumber(stats.hit_2x_count),
@@ -167,11 +167,11 @@ function mapLiveCall(row: CallRow): LiveCall {
       ?? WELL_KNOWN_TOKEN_LOGOS[symbol.toUpperCase()]
       ?? null,
     contractAddress: token?.contract_address ?? null,
-    entryPriceUsd:   toNumber(row.entry_price_usd),
+    entryPriceUsd:   toNumber(row.entry_price_usd, null),
     currentPriceUsd: metrics?.current_price_usd == null ? null : toNumber(metrics.current_price_usd),
     peakPriceUsd:    metrics?.peak_price_usd    == null ? null : toNumber(metrics.peak_price_usd),
-    currentRoiPct:   toNumber(metrics?.current_roi_pct),
-    peakMultiple:    toNumber(metrics?.peak_multiple, 1),
+    currentRoiPct:   toNumber(metrics?.current_roi_pct, null),
+    peakMultiple:    toNumber(metrics?.peak_multiple, null),
     hit2x:           Boolean(metrics?.hit_2x),
     hit10x:          Boolean(metrics?.hit_10x),
     hit100x:         Boolean(metrics?.hit_100x)
@@ -484,7 +484,7 @@ export async function getTrendingTokens(limit = 6, orderBy: "unique_channels" | 
           : WELL_KNOWN_TOKEN_LOGOS[symbol.toUpperCase()] ?? null,
         totalCalls:      toNumber(row.total_calls),
         uniqueChannels:  toNumber(row.unique_channels),
-        averageRoiPct:   toNumber(row.avg_roi_pct),
+        averageRoiPct:   toNumber(row.avg_roi_pct, null),
         bestMultiple:    toNumber(row.best_multiple, 1),
         lastCalledAt:    row.last_called_at  ? String(row.last_called_at)  : null,
       } satisfies TrendingToken;

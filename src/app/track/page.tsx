@@ -19,7 +19,7 @@ type ChannelResult = {
   telegramHandle: string; telegramUrl: string;
   status: string; isVerified: boolean;
   totalCalls: number; winRatePct: number;
-  averageRoiPct: number; rankingScore: number;
+  averageRoiPct: number | null; rankingScore: number;
 };
 
 type TokenResult = {
@@ -52,8 +52,8 @@ type TrackedResult = {
   isVerified: boolean;
   totalCalls: number;
   winRatePct: number;
-  averageRoiPct: number;
-  averagePeakRoiPct: number;
+  averageRoiPct: number | null;
+  averagePeakRoiPct: number | null;
   bestMultiple: number;
   rankingScore: number;
   hit2xCount: number;
@@ -105,8 +105,8 @@ function ChannelResultCard({ ch }: { ch: ChannelResult }) {
         </div>
         <div className="text-right shrink-0">
           <div className="text-xs text-slate-500">Avg ROI</div>
-          <div className={`text-lg font-semibold ${ch.averageRoiPct > 0 ? "text-emerald-300" : ch.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
-            {formatPercent(ch.averageRoiPct)}
+          <div className={`text-lg font-semibold ${ch.averageRoiPct == null ? "text-slate-500" : ch.averageRoiPct > 0 ? "text-emerald-300" : ch.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
+            {ch.averageRoiPct == null ? "—" : formatPercent(ch.averageRoiPct)}
           </div>
         </div>
       </div>
@@ -211,8 +211,8 @@ function TrackedResultCard({
           <div className="flex items-center gap-1.5 text-xs text-slate-500 uppercase tracking-widest">
             <TrendingUp className="size-3" /> Avg ROI
           </div>
-          <div className={`text-2xl font-semibold ${result.averageRoiPct > 0 ? "text-emerald-300" : result.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
-            {formatPercent(result.averageRoiPct)}
+          <div className={`text-2xl font-semibold ${result.averageRoiPct == null ? "text-slate-500" : result.averageRoiPct > 0 ? "text-emerald-300" : result.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
+            {result.averageRoiPct == null ? "—" : formatPercent(result.averageRoiPct)}
           </div>
         </div>
         <div className="p-4 space-y-1">
@@ -251,7 +251,7 @@ function TrackedResultCard({
             </span>
           )}
           <span className="text-xs rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-slate-300">
-            Peak ROI {formatPercent(result.averagePeakRoiPct)}
+            Peak ROI {result.averagePeakRoiPct == null ? "—" : formatPercent(result.averagePeakRoiPct)}
           </span>
         </div>
       )}

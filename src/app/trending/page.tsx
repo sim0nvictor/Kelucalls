@@ -258,8 +258,8 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                         </div>
                         <div>
                           <div className="text-slate-500">Avg ROI</div>
-                          <div className={`font-semibold ${topGainer.averageRoiPct > 0 ? "text-emerald-400" : topGainer.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
-                            {formatPercent(topGainer.averageRoiPct)}
+                          <div className={`font-semibold ${topGainer.averageRoiPct == null ? "text-slate-500" : topGainer.averageRoiPct > 0 ? "text-emerald-400" : topGainer.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
+                            {topGainer.averageRoiPct == null ? "—" : formatPercent(topGainer.averageRoiPct)}
                           </div>
                         </div>
                       </div>
@@ -408,8 +408,8 @@ export default async function TrendingPage({ searchParams }: PageProps) {
                         <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-white sm:table-cell">{token.totalCalls}</td>
                         <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-white sm:table-cell">{token.uniqueChannels}</td>
                         <td className="px-3 py-3 text-right font-mono tabular-nums">
-                          <span className={`font-semibold ${token.averageRoiPct > 0 ? "text-emerald-400" : token.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
-                            {formatCompactPercent(token.averageRoiPct)}
+                          <span className={`font-semibold ${token.averageRoiPct == null ? "text-slate-500" : token.averageRoiPct > 0 ? "text-emerald-400" : token.averageRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>
+                            {token.averageRoiPct == null ? "—" : formatCompactPercent(token.averageRoiPct)}
                           </span>
                         </td>
                         <td className="hidden px-3 py-3 text-right font-mono tabular-nums font-semibold text-white sm:table-cell">{formatMultiple(token.bestMultiple)}</td>

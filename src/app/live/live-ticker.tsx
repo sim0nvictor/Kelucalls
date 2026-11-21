@@ -30,7 +30,7 @@ export function LiveFeedTicker({ calls: initialCalls }: LiveFeedTickerProps) {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium text-white">{call.tokenSymbol}</span>
-                {call.currentRoiPct > 0 ? (
+                {call.currentRoiPct == null ? null : call.currentRoiPct > 0 ? (
                   <TrendingUp className="size-3 text-emerald-400" />
                 ) : (
                   <TrendingDown className="size-3 text-red-400" />
@@ -38,10 +38,10 @@ export function LiveFeedTicker({ calls: initialCalls }: LiveFeedTickerProps) {
               </div>
               <div className="text-xs text-slate-500">{call.channelTitle}</div>
             </div>
-            <div className={`text-sm font-bold ${call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatPercent(call.currentRoiPct)}
+            <div className={`text-sm font-bold ${call.currentRoiPct == null ? "text-slate-500" : call.currentRoiPct > 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {call.currentRoiPct == null ? "—" : formatPercent(call.currentRoiPct)}
             </div>
-            <div className="text-sm text-slate-400">{formatMultiple(call.peakMultiple)}</div>
+            <div className="text-sm text-slate-400">{call.peakMultiple == null ? "—" : formatMultiple(call.peakMultiple)}</div>
           </Link>
         ))}
       </div>

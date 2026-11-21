@@ -16,9 +16,9 @@ export type ChannelSummary = {
   rankingScore: number | null;
   totalCalls: number;
   winRatePct: number;
-  averageRoiPct: number;
+  averageRoiPct: number | null;
   medianRoiPct: number | null;
-  averagePeakRoiPct: number;
+  averagePeakRoiPct: number | null;
   averageMultiple: number;
   bestMultiple: number;
   hit2xCount: number;
@@ -40,11 +40,11 @@ export type LiveCall = {
   tokenSymbol: string;
   tokenLogoUrl: string | null;
   contractAddress: string | null;
-  entryPriceUsd: number;
+  entryPriceUsd: number | null;
   currentPriceUsd: number | null;
   peakPriceUsd: number | null;
-  currentRoiPct: number;
-  peakMultiple: number;
+  currentRoiPct: number | null;
+  peakMultiple: number | null;
   hit2x: boolean;
   hit10x: boolean;
   hit100x: boolean;
@@ -58,7 +58,7 @@ export type TrendingToken = {
   contractAddress: string | null;
   totalCalls: number;
   uniqueChannels: number;
-  averageRoiPct: number;
+  averageRoiPct: number | null;
   bestMultiple: number;
   lastCalledAt: string | null;
   logoUrl: string | null;

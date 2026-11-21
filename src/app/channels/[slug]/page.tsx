@@ -47,7 +47,7 @@ export async function generateMetadata({
   const channel = detail.summary;
   const canonical = `${SITE_URL}/channels/${channel.slug}`;
   const title = `${channel.title} \u2014 Telegram call performance`;
-  const description = `${channel.title} has ${channel.totalCalls} tracked calls with a ${channel.winRatePct.toFixed(1)}% win rate and ${channel.averageRoiPct.toFixed(1)}% average ROI. Best multiple: ${channel.bestMultiple.toFixed(2)}x.`;
+  const description = `${channel.title} has ${channel.totalCalls} tracked calls with a ${channel.winRatePct.toFixed(1)}% win rate and ${channel.averageRoiPct == null ? "unavailable" : channel.averageRoiPct.toFixed(1) + "%"} average ROI. Best multiple: ${channel.bestMultiple.toFixed(2)}x.`;
 
   // Channels with almost no history are real pages but thin content. Keep them
   // crawlable and linked, but out of the index until they have a track record.
@@ -79,7 +79,7 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
     { label: "Tracked calls", value: channel.totalCalls.toLocaleString() },
     { label: "Win rate", value: `${channel.winRatePct.toFixed(1)}%` },
     { label: "Median ROI · typical call", value: channel.medianRoiPct !== null ? pct(channel.medianRoiPct) : "—" },
-    { label: "Average ROI · raw average", value: pct(channel.averageRoiPct) },
+    { label: "Average ROI · raw average", value: channel.averageRoiPct == null ? "—" : pct(channel.averageRoiPct) },
     { label: "Best multiple", value: `${channel.bestMultiple.toFixed(2)}x` },
     { label: "Simulated PnL", value: usd.format(channel.simulatedCurrentPnlUsd) },
     { label: "2x / 10x / 100x", value: `${channel.hit2xCount} / ${channel.hit10xCount} / ${channel.hit100xCount}` },
@@ -232,12 +232,12 @@ export default async function ChannelDetailPage({ params }: ChannelPageProps) {
                       </time>
                     </td>
                     <td
-                      className={`px-2 py-3 text-right font-mono text-xs tabular-nums sm:px-4 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-300" : call.currentRoiPct < 0 ? "text-rose-300" : "text-slate-300"}`}
+                      className={`px-2 py-3 text-right font-mono text-xs tabular-nums sm:px-4 sm:text-sm ${call.currentRoiPct == null ? "text-slate-500" : call.currentRoiPct > 0 ? "text-emerald-300" : call.currentRoiPct < 0 ? "text-rose-300" : "text-slate-300"}`}
                     >
-                      {pct(call.currentRoiPct)}
+                      {call.currentRoiPct == null ? "—" : pct(call.currentRoiPct)}
                     </td>
                     <td className="px-2 py-3 text-right font-mono text-xs tabular-nums text-slate-300 sm:px-4 sm:text-sm">
-                      {call.peakMultiple.toFixed(2)}x
+                      {call.peakMultiple == null ? "—" : `${call.peakMultiple.toFixed(2)}x`}
                     </td>
                   </DataTableRow>
                 ))}

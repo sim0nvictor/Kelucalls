@@ -122,7 +122,7 @@ export function channelDatasetSchema(channel: ChannelSummary): JsonLdNode {
     "@type": "Dataset",
     "@id": `${url}#dataset`,
     name: `${channel.title} \u2014 Telegram call performance`,
-    description: `Measured call performance for the Telegram channel ${channel.title}: ${channel.totalCalls} tracked calls, ${channel.winRatePct.toFixed(1)}% win rate, and ${channel.averageRoiPct.toFixed(1)}% average ROI.`,
+    description: `Measured call performance for the Telegram channel ${channel.title}: ${channel.totalCalls} tracked calls, ${channel.winRatePct.toFixed(1)}% win rate, and ${channel.averageRoiPct == null ? "unavailable" : channel.averageRoiPct.toFixed(1) + "%"} average ROI.`,
     url,
     isAccessibleForFree: true,
     creator: { "@id": ORG_ID },

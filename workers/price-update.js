@@ -17,11 +17,14 @@ import {
   finishWorkerRun,
   getNumberEnv,
   getSupabaseConfig,
+  isTransientHttpError,
   loadWorkerEnv,
   log,
   sleep,
   startWorkerRun,
 } from "./worker-utils.js";
+import { normalizeDexChain, parseDexPairSnapshot, selectDexPair } from "./dexscreener.js";
+import { calculateCallPerformance } from "./price-metrics.js";
 
 const PROCESS_ENV_ONLY = process.env.PRICE_WORKER_NO_DOTENV === "true";
 loadWorkerEnv(import.meta.url, { loadDotenvFiles: !PROCESS_ENV_ONLY });
@@ -44,49 +47,34 @@ const ACHIEVEMENT_MILESTONES = [
   { key: "100x", field: "hit_100x", multiple: 100 },
 ];
 
-function mapDexChain(value) {
-  const normalized = String(value || "").toLowerCase();
-  if (["solana", "sol"].includes(normalized)) return "solana";
-  if (["ethereum", "eth"].includes(normalized)) return "ethereum";
-  if (["bsc", "binance-smart-chain"].includes(normalized)) return "bsc";
-  if (["base"].includes(normalized)) return "base";
-  if (["arbitrum", "arb"].includes(normalized)) return "arbitrum";
-  if (["polygon", "matic"].includes(normalized)) return "polygon";
-  if (["avalanche", "avax"].includes(normalized)) return "avalanche";
-  if (["sui"].includes(normalized)) return "sui";
-  if (["tron", "trx"].includes(normalized)) return "tron";
-  return "other";
-}
-
-async function fetchDexSnapshot(contractAddress, retries = MAX_RETRIES) {
+async function fetchDexSnapshot(contractAddress, expectedChain, retries = MAX_RETRIES) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const { data } = await axios.get(
         `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(contractAddress)}`,
         { timeout: DEX_API_TIMEOUT_MS }
       );
-      const pair = data?.pairs?.[0];
-      if (!pair) return null;
+      const selected = selectDexPair(data?.pairs, expectedChain);
+      if (!selected.pair) return { snapshot: null, reason: selected.reason };
 
-      const price = pair.priceUsd == null ? null : Number(pair.priceUsd);
-      const normalizedPrice = price !== null && Number.isFinite(price) && price > 0 ? price : null;
-      const marketCap = pair.marketCap == null ? null : Number(pair.marketCap);
-      return {
-        priceUsd: normalizedPrice,
-        marketCapUsd: Number.isFinite(marketCap) ? marketCap : null,
-        chain: mapDexChain(pair.chainId),
-        // DexScreener omits `info` on thin-liquidity / brand-new pairs — guard for it.
-        logoUrl: pair.info?.imageUrl ?? null
-      };
+      const snapshot = parseDexPairSnapshot(selected.pair);
+      if (!snapshot) return { snapshot: null, reason: "invalid_price" };
+
+      return { snapshot, reason: null };
     } catch (err) {
       log(LOG_LEVELS.WARN, "dex", `Snapshot fetch failed (attempt ${attempt}/${retries})`, {
         contract: contractAddress,
+        expectedChain: normalizeDexChain(expectedChain),
+        status: err?.response?.status ?? null,
         error: err.message
       });
-      if (attempt < retries) await sleep(RETRY_DELAY_MS * attempt);
+      if (attempt >= retries || !isTransientHttpError(err)) {
+        return { snapshot: null, reason: "provider_error" };
+      }
+      await sleep(RETRY_DELAY_MS * attempt);
     }
   }
-  return null;
+  return { snapshot: null, reason: "provider_error" };
 }
 
 async function getOpenCalls(supabase) {
@@ -354,8 +342,9 @@ async function persistHistoricalObservations(supabase, observations) {
 }
 
 async function updateCallMetrics(supabase, updates) {
-  if (updates.length === 0) return;
+  if (updates.length === 0) return 0;
 
+  let written = 0;
   for (const update of updates) {
     const { data: existing } = await supabase
       .from("call_metrics")
@@ -364,19 +353,6 @@ async function updateCallMetrics(supabase, updates) {
       .maybeSingle();
 
     if (!Number.isFinite(update.currentPrice) || update.currentPrice <= 0) continue;
-
-    // If the call has no entry price recorded yet, use the first price
-    // we see from DexScreener as the entry. This handles calls that were
-    // backfilled before DexScreener had data for the token.
-    let entryPrice = Number(update.entryPriceUsd);
-    if (!entryPrice || entryPrice <= 0) {
-      entryPrice = update.currentPrice;
-      // Backfill the entry price on the calls row so future cycles use it
-      await supabase
-        .from("calls")
-        .update({ entry_price_usd: update.currentPrice })
-        .eq("id", update.callId);
-    }
 
     const priorPeak = existing?.peak_price_usd == null
       ? null
@@ -387,10 +363,15 @@ async function updateCallMetrics(supabase, updates) {
     const peakPrice = priorPeak == null
       ? update.currentPrice
       : Math.max(priorPeak, update.currentPrice);
-    const currentMultiple = entryPrice > 0 ? update.currentPrice / entryPrice : 1;
-    const peakMultiple    = entryPrice > 0 ? peakPrice / entryPrice : 1;
-    const currentValue    = 10 * currentMultiple;
-    const peakValue       = 10 * peakMultiple;
+
+    // A current market quote is not a historical call entry. Derived metrics
+    // stay null until the call has a valid recorded entry price.
+    const performance = calculateCallPerformance({
+      entryPriceUsd: update.entryPriceUsd,
+      currentPriceUsd: update.currentPrice,
+      peakPriceUsd: peakPrice,
+      investmentUsd: 10,
+    });
 
     const { error } = await supabase
       .from("call_metrics")
@@ -400,21 +381,21 @@ async function updateCallMetrics(supabase, updates) {
         current_market_cap_usd: update.currentMarketCapUsd,
         peak_price_usd: peakPrice,
         peak_market_cap_usd: update.currentMarketCapUsd,
-        current_roi_pct: ((update.currentPrice - entryPrice) / entryPrice) * 100,
-        peak_roi_pct: ((peakPrice - entryPrice) / entryPrice) * 100,
-        current_multiple: currentMultiple,
-        peak_multiple: peakMultiple,
-        is_win: currentMultiple >= 1,
-        hit_2x:   peakMultiple >= 2,
-        hit_5x:   peakMultiple >= 5,
-        hit_10x:  peakMultiple >= 10,
-        hit_50x:  peakMultiple >= 50,
-        hit_100x: peakMultiple >= 100,
-        simulated_investment_usd: 10,
-        simulated_current_value_usd: currentValue,
-        simulated_peak_value_usd: peakValue,
-        simulated_current_pnl_usd: currentValue - 10,
-        simulated_peak_pnl_usd: peakValue - 10,
+        current_roi_pct: performance.currentRoiPct,
+        peak_roi_pct: performance.peakRoiPct,
+        current_multiple: performance.currentMultiple,
+        peak_multiple: performance.peakMultiple,
+        is_win: performance.isWin,
+        hit_2x: performance.hit2x,
+        hit_5x: performance.hit5x,
+        hit_10x: performance.hit10x,
+        hit_50x: performance.hit50x,
+        hit_100x: performance.hit100x,
+        simulated_investment_usd: performance.currentRoiPct == null ? null : 10,
+        simulated_current_value_usd: performance.simulatedCurrentValueUsd,
+        simulated_peak_value_usd: performance.simulatedPeakValueUsd,
+        simulated_current_pnl_usd: performance.simulatedCurrentPnlUsd,
+        simulated_peak_pnl_usd: performance.simulatedPeakPnlUsd,
         refreshed_at: new Date().toISOString(),
       }, { onConflict: "call_id" });
 
@@ -426,12 +407,14 @@ async function updateCallMetrics(supabase, updates) {
       continue;
     }
 
+    written += 1;
+
     await insertMilestoneEvents(supabase, {
       callId: update.callId,
       channelId: update.channelId,
       tokenId: update.tokenId,
       priorPeakMultiple,
-      newPeakMultiple: peakMultiple,
+      newPeakMultiple: performance.peakMultiple,
     });
 
     await supabase
@@ -443,6 +426,8 @@ async function updateCallMetrics(supabase, updates) {
       })
       .eq("id", update.tokenId);
   }
+
+  return written;
 }
 
 async function markCallsRefreshed(supabase, callIds) {
@@ -478,6 +463,7 @@ async function runPriceUpdate(supabase, runningRef) {
 
   const summary = {
     processed: 0,
+    priced: 0,
     updated: 0,
     unpriced: 0,
     durationMs: 0,
@@ -491,7 +477,9 @@ async function runPriceUpdate(supabase, runningRef) {
     const unpricedCallIds = [];
     const historicalObservations = new Map();
     const snapshotCache = new Map();
+    const unpricedReasons = { no_pairs: 0, chain_mismatch: 0, invalid_price: 0, provider_error: 0 };
     let processed = 0;
+    let priced = 0;
     let updated = 0;
     let unpriced = 0;
 
@@ -501,15 +489,18 @@ async function runPriceUpdate(supabase, runningRef) {
       const contractAddress = call.tokens?.contract_address;
       if (!contractAddress) continue;
 
-      let snapshot;
-      if (snapshotCache.has(contractAddress)) {
-        snapshot = snapshotCache.get(contractAddress);
+      const expectedChain = call.tokens?.chain ?? "other";
+      const cacheKey = `${normalizeDexChain(expectedChain)}:${contractAddress.toLowerCase()}`;
+      let result;
+      if (snapshotCache.has(cacheKey)) {
+        result = snapshotCache.get(cacheKey);
       } else {
-        snapshot = await fetchDexSnapshot(contractAddress);
-        snapshotCache.set(contractAddress, snapshot);
+        result = await fetchDexSnapshot(contractAddress, expectedChain);
+        snapshotCache.set(cacheKey, result);
       }
 
-      if (snapshot !== null && snapshot.priceUsd !== null && snapshot.priceUsd > 0) {
+      const snapshot = result?.snapshot ?? null;
+      if (snapshot && snapshot.priceUsd > 0) {
         updates.push({
           callId: call.id,
           tokenId: call.token_id,
@@ -519,7 +510,7 @@ async function runPriceUpdate(supabase, runningRef) {
           currentMarketCapUsd: snapshot.marketCapUsd,
           logoUrl: snapshot.logoUrl,
         });
-        updated += 1;
+        priced += 1;
 
         if (call.token_id) {
           historicalObservations.set(call.token_id, {
@@ -532,17 +523,19 @@ async function runPriceUpdate(supabase, runningRef) {
       } else {
         unpricedCallIds.push(call.id);
         unpriced += 1;
+        const reason = result?.reason ?? "provider_error";
+        if (Object.hasOwn(unpricedReasons, reason)) unpricedReasons[reason] += 1;
       }
 
       processed += 1;
       if (updates.length >= BATCH_SIZE) {
-        await updateCallMetrics(supabase, updates);
+        updated += await updateCallMetrics(supabase, updates);
         updates.length = 0;
       }
     }
 
     if (updates.length > 0) {
-      await updateCallMetrics(supabase, updates);
+      updated += await updateCallMetrics(supabase, updates);
     }
 
     if (unpricedCallIds.length > 0) {
@@ -562,17 +555,23 @@ async function runPriceUpdate(supabase, runningRef) {
     }
 
     summary.processed = processed;
+    summary.priced = priced;
     summary.updated = updated;
     summary.unpriced = unpriced;
+    summary.unpricedReasons = unpricedReasons;
+    summary.priceCoveragePct = processed > 0 ? Number(((priced / processed) * 100).toFixed(2)) : 0;
+    summary.metricsWriteCoveragePct = processed > 0 ? Number(((updated / processed) * 100).toFixed(2)) : 0;
+    summary.partial = unpriced > 0 || updated < processed;
     summary.durationMs = Date.now() - startedAt;
 
-    const runStatus = (processed > 0 && (updated > 0 || unpriced > 0)) ? "succeeded" : "failed";
+    const runStatus = processed > 0 && updated > 0 ? "succeeded" : "failed";
 
     log(LOG_LEVELS.INFO, WORKER_NAME, "Price update complete", { ...summary, status: runStatus });
     await finishWorkerRun(supabase, WORKER_NAME, runId, runStatus, summary);
     return summary;
   } catch (error) {
     summary.processed = 0;
+    summary.priced = 0;
     summary.updated = 0;
     summary.unpriced = 0;
     summary.durationMs = Date.now() - startedAt;

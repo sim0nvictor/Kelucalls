@@ -586,10 +586,10 @@ useEffect(() => {
                       <td
                         className={
                           "px-1 py-2.5 text-right font-mono text-xs font-medium tabular-nums sm:px-3 sm:py-3 sm:text-sm " +
-                          (row.averageRoiPct > 0 ? "text-emerald-400" : row.averageRoiPct < 0 ? "text-red-400" : "text-slate-300")
+                          (row.averageRoiPct == null ? "text-slate-500" : row.averageRoiPct > 0 ? "text-emerald-400" : row.averageRoiPct < 0 ? "text-red-400" : "text-slate-300")
                         }
                       >
-                        {formatCompactPercent(row.averageRoiPct)}
+                        {row.averageRoiPct == null ? "—" : formatCompactPercent(row.averageRoiPct)}
                       </td>
                       <td className="hidden px-3 py-3 text-right font-medium text-purple-300 sm:table-cell">
                         {formatMultiple(row.bestMultiple)}

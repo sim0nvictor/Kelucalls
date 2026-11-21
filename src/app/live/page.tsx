@@ -194,8 +194,8 @@ export default async function LivePage({ searchParams }: PageProps) {
                           <td className="whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-semibold tabular-nums text-white sm:px-3 sm:py-3 sm:text-sm">
                             <LivePriceCell address={call.contractAddress} symbol={call.tokenSymbol} fallbackPriceUsd={call.currentPriceUsd} />
                           </td>
-                          <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{formatCompactPercent(call.currentRoiPct)}</td>
-                          <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{formatMultiple(call.peakMultiple)}</td>
+                          <td className={`whitespace-nowrap px-1 py-2 text-right font-mono text-[10px] font-bold tabular-nums sm:px-3 sm:py-3 sm:text-sm ${call.currentRoiPct == null ? "text-slate-500" : call.currentRoiPct > 0 ? "text-emerald-400" : call.currentRoiPct < 0 ? "text-red-400" : "text-slate-300"}`}>{call.currentRoiPct == null ? "—" : formatCompactPercent(call.currentRoiPct)}</td>
+                          <td className="hidden px-3 py-3 text-right text-base font-bold text-white sm:table-cell">{call.peakMultiple == null ? "—" : formatMultiple(call.peakMultiple)}</td>
                           <td className="hidden whitespace-nowrap px-3 py-3 text-right text-xs text-slate-400 last:pr-4 sm:table-cell">{new Date(call.calledAt).toLocaleTimeString()}</td>
                         </DataTableRow>
                       ))}
@@ -279,7 +279,7 @@ export default async function LivePage({ searchParams }: PageProps) {
                   </div>
                   <div className="rounded-xl bg-white/5 p-3">
                     <div className="text-2xl font-bold text-emerald-400">
-                      {liveCalls.filter((c) => c.currentRoiPct > 0).length}
+                      {liveCalls.filter((c) => c.currentRoiPct != null && c.currentRoiPct > 0).length}
                     </div>
                     <div className="text-xs text-slate-500">Profitable</div>
                   </div>
