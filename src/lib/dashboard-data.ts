@@ -541,9 +541,50 @@ export async function getDashboardSnapshot(rankingMode: RankingMode = "smart"): 
 }
  
 export async function getChannelDetail(slug: string): Promise<ChannelDetail | null> {
-  const leaderboard = await getLeaderboard("smart", 100);
-  const summary     = leaderboard.find((ch) => ch.slug === slug);
- 
+  // Resolve the requested channel directly instead of searching a capped leaderboard.
+  // This keeps profile access independent of the channel's ranking position.
+  const summary = await withSupabase(async (supabase) => {
+    const { data, error } = await supabase
+      .from("channels")
+      .select(`
+        id,
+        slug,
+        title,
+        telegram_handle,
+        telegram_url,
+        description,
+        avatar_url,
+        status,
+        is_paid_channel,
+        is_verified,
+        channel_stats (
+          total_calls,
+          win_rate_pct,
+          average_roi_pct,
+          average_peak_roi_pct,
+          average_multiple,
+          best_multiple,
+          hit_2x_count,
+          hit_10x_count,
+          hit_100x_count,
+          simulated_investment_usd,
+          simulated_current_value_usd,
+          simulated_current_pnl_usd,
+          simulated_peak_pnl_usd,
+          ranking_score,
+          median_roi_pct,
+          refreshed_at
+        )
+      `)
+      .eq("slug", slug)
+      .in("status", ["active", "paused"])
+      .eq("is_paid_channel", false)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapChannelSummary(data as ChannelRow) : null;
+  }, null as ChannelSummary | null);
+
   if (!summary) return null;
  
   const recentCalls = await withSupabase(async (supabase) => {
